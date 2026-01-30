@@ -1,7 +1,7 @@
 import helmet from 'helmet';
 import cors from 'cors';
 import express, { Express, Request, Response, NextFunction } from 'express';
-import pino from 'pino';
+import { pino } from 'pino';
 
 const logger = pino();
 

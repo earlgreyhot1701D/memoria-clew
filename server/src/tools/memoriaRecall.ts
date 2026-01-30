@@ -1,5 +1,5 @@
 import { Tool } from '../lib/leanmcp.js';
-import pino from 'pino';
+import { pino } from 'pino';
 
 const logger = pino();
 

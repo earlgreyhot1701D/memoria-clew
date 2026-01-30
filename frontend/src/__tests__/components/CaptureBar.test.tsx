@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { CaptureBar } from '../../components/CaptureBar';
-import React from 'react';
 
 describe('CaptureBar', () => {
     it('renders input and button', () => {

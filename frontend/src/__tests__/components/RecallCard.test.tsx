@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { RecallCard } from '../../components/RecallCard';
-import React from 'react';
 
 const mockItem = {
     id: '1',

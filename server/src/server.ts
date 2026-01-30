@@ -3,7 +3,7 @@ import express from 'express';
 import { MCPServer, createHTTPServer } from './lib/leanmcp.js';
 import { setupSecurityMiddleware } from './middleware/securityMiddleware.js';
 import { memoriaRecall } from './tools/memoriaRecall.js';
-import pino from 'pino';
+import { pino } from 'pino';
 import 'dotenv/config';
 
 const logger = pino();

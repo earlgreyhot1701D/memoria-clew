@@ -6,7 +6,7 @@ interface ArchiveCardProps {
     onOpen?: (id: string) => void;
 }
 
-export const ArchiveCard: React.FC<ArchiveCardProps> = ({ item, onOpen }) => (
+export const ArchiveCard: React.FC<ArchiveCardProps> = ({ item }) => (
     <article
         className="card"
         style={{ border: '1px solid #ddd' }}

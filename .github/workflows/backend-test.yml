@@ -1,0 +1,29 @@
+name: Backend Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: cd server && npm install
+      
+      - name: TypeScript check
+        run: cd server && npm run lint
+      
+      - name: Run tests with coverage
+        run: cd server && npm test -- --coverage
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./server/coverage
+          files: ./server/coverage/coverage-final.json
+          fail_ci_if_error: false

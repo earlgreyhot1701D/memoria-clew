@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  mcp-server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+    volumes:
+      - ./server/src:/app/src
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_MCP_SERVER_URL: http://mcp-server:3001
+    volumes:
+      - ./frontend/src:/app/src
+    depends_on:
+      - mcp-server

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useFirestore } from '../hooks/useFirestore';
+import { useGitHubContext } from '../hooks/useGitHubContext';
 import { Header } from './Header';
 import { StatusBar } from './StatusBar';
 import { CaptureBar } from './CaptureBar';
@@ -16,6 +17,7 @@ export const Dashboard: React.FC = () => {
     const { data: archiveItems } = useFirestore('archive');
     const { data: recallCards } = useFirestore('recalls');
     const { data: logs } = useFirestore('logs');
+    const { context, syncContext, loading } = useGitHubContext();
 
     const [error, setError] = useState<string | null>(null);
 
@@ -73,14 +75,28 @@ export const Dashboard: React.FC = () => {
 
                 <aside aria-label="Build context">
                     <h2 className="mono">BUILD_CONTEXT</h2>
-                    <div className="card" style={{ marginBottom: '15px', padding: '15px' }}>
-                        <h3 className="mono" style={{ fontSize: '13px', fontWeight: 'bold' }}>
-                            metis-clew-v2
-                        </h3>
-                        <p className="mono" style={{ fontSize: '9px', marginTop: '5px', color: '#ff0033' }}>
-                            CONTEXT_TAG: REDIS
-                        </p>
-                    </div>
+                    <button
+                        onClick={syncContext}
+                        className="btn-minimal mono"
+                        disabled={loading}
+                        style={{ marginBottom: '15px', width: '100%' }}
+                    >
+                        {loading ? 'SYNCING...' : 'SYNC GITHUB'}
+                    </button>
+                    {context?.repos?.map((repo: any) => (
+                        <div
+                            key={repo.id}
+                            className="card"
+                            style={{ marginBottom: '15px', padding: '15px' }}
+                        >
+                            <h3 className="mono" style={{ fontSize: '13px', fontWeight: 'bold' }}>
+                                {repo.repoName}
+                            </h3>
+                            <p className="mono" style={{ fontSize: '9px', marginTop: '5px', color: '#ff0033' }}>
+                                TAGS: {repo.tags.join(', ')}
+                            </p>
+                        </div>
+                    ))}
                 </aside>
 
                 <main id="main-content" aria-label="Main content">

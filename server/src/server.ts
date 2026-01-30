@@ -4,6 +4,8 @@ import { MCPServer, createHTTPServer } from './lib/leanmcp.js';
 import { setupSecurityMiddleware } from './middleware/securityMiddleware.js';
 import { memoriaRecall } from './tools/memoriaRecall.js';
 import { pino } from 'pino';
+import { seedGitHubContext, getGitHubContext } from './services/githubService.js';
+import { checkRateLimit } from './services/rateLimitService.js';
 import 'dotenv/config';
 
 const logger = pino();
@@ -13,6 +15,61 @@ setupSecurityMiddleware(app);
 
 app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
+});
+
+// GitHub Context Seeding Endpoint
+app.post('/api/context/sync', async (req, res) => {
+    try {
+        const githubToken = process.env.GITHUB_TOKEN!;
+        const githubUsername = process.env.GITHUB_USERNAME!;
+
+        const rateLimit = await checkRateLimit('github', githubUsername);
+        if (!rateLimit.allowed) {
+            return res.status(429).json({
+                error: 'Rate limit exceeded',
+                resetSeconds: rateLimit.resetSeconds,
+            });
+        }
+
+        const result = await seedGitHubContext(githubToken, githubUsername);
+        res.json({
+            success: true,
+            data: result,
+            message: 'GitHub context seeded successfully',
+        });
+    } catch (err: any) {
+        logger.error({ error: err.message }, 'Context sync failed');
+        res.status(500).json({
+            error: 'Failed to sync GitHub context',
+            details: err.message,
+        });
+    }
+});
+
+// Get Cached GitHub Context
+app.get('/api/context', async (req, res) => {
+    try {
+        const githubUsername = process.env.GITHUB_USERNAME!;
+        const context = await getGitHubContext(githubUsername);
+
+        if (!context) {
+            return res.status(404).json({
+                error: 'No cached context found',
+                message: 'Run /api/context/sync first',
+            });
+        }
+
+        res.json({
+            success: true,
+            data: context,
+        });
+    } catch (err: any) {
+        logger.error({ error: err.message }, 'Get context failed');
+        res.status(500).json({
+            error: 'Failed to retrieve context',
+            details: err.message,
+        });
+    }
 });
 
 const mcpServer = new MCPServer({

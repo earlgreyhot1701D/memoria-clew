@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import admin from 'firebase-admin';
 import { pino } from 'pino';
 

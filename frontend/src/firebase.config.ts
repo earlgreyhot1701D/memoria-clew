@@ -11,6 +11,10 @@ const firebaseConfig = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+console.log('[DEBUG] Firebase API Key:', firebaseConfig.apiKey ? 'Loaded' : 'Missing');
+console.log('[DEBUG] Env Dir Test:', import.meta.env.VITE_MCP_SERVER_URL);
+
+
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);

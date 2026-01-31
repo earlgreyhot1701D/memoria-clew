@@ -5,7 +5,7 @@
     "scripts": {
         "dev": "ts-node --esm src/server.ts",
         "build": "tsc",
-        "start": "node dist/server.js",
+        "start": "node --env-file=../.env dist/server.js",
         "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage",
         "test:watch": "jest --watch",
         "lint": "tsc --noEmit",
@@ -13,6 +13,8 @@
         "docker:run": "docker run -p 3001:3001 --env-file .env memoria-mcp"
     },
     "dependencies": {
+        "@leanmcp/cli": "^0.5.6",
+        "@leanmcp/core": "^0.4.7",
         "axios": "^1.6.0",
         "cors": "^2.8.5",
         "dotenv": "^16.3.0",

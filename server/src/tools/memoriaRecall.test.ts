@@ -1,4 +1,5 @@
-import { memoriaRecall } from './memoriaRecall.js';
+import { memoriaRecallTool } from './memoriaRecall.js';
+import { describe, it, expect } from '@jest/globals';
 
 describe('MemoriaRecall Tool', () => {
     it('recalls items based on tags', async () => {
@@ -7,11 +8,10 @@ describe('MemoriaRecall Tool', () => {
             { title: 'Node Guide', tags: ['node', 'backend'], source: 'web' },
         ];
 
-        // @ts-ignore
-        const result = await memoriaRecall({
+        const result = await memoriaRecallTool.execute({
             newItemTags: ['react'],
             currentContext: [],
-            archive: mockArchive,
+            archiveItems: mockArchive,
         });
 
         expect(result.matched_items).toHaveLength(1);
@@ -23,11 +23,10 @@ describe('MemoriaRecall Tool', () => {
             { title: 'Node Guide', tags: ['node', 'backend'], source: 'web' },
         ];
 
-        // @ts-ignore
-        const result = await memoriaRecall({
+        const result = await memoriaRecallTool.execute({
             newItemTags: ['react'],
             currentContext: [],
-            archive: mockArchive,
+            archiveItems: mockArchive,
         });
 
         expect(result.matched_items).toHaveLength(0);

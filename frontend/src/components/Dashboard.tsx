@@ -46,12 +46,6 @@ export const Dashboard: React.FC = () => {
             <StatusBar contextsSeeded={true} modelVersion="gemini-2.5-flash" promptVersion="v0.3" />
 
             <div className="dashboard-grid">
-                <Header contextStatus="ok" scanReady={true} />
-
-                {error && (
-                    <ErrorBanner message={error} onDismiss={() => setError(null)} />
-                )}
-
                 <section className="top-tools" aria-label="Primary actions">
                     <div className="sync-card card" aria-label="Context sources">
                         <div>
@@ -72,6 +66,12 @@ export const Dashboard: React.FC = () => {
                         }}
                     />
                 </section>
+
+                {error && (
+                    <ErrorBanner message={error} onDismiss={() => setError(null)} />
+                )}
+
+                <Header contextStatus="ok" scanReady={true} />
 
                 <aside aria-label="Build context">
                     <h2 className="mono">BUILD_CONTEXT</h2>

@@ -1,51 +1,33 @@
-import { Tool } from '../lib/leanmcp.js';
+import { Tool } from '@leanmcp/core';
 import { pino } from 'pino';
+import { recallEngine, type RecallInput, type RecallOutput } from '../services/recallEngine.js';
 
 const logger = pino();
 
-export interface RecallInput {
-    newItemTags: string[];
-    currentContext: string[];
-    archive: any[];
-}
-
-export interface RecallOutput {
-    matched_items: Array<{
-        title: string;
-        source: string;
-        confidence: number;
-        reason: string;
-    }>;
-    reasoning: string;
-}
-
-@Tool("Recall relevant items from archive")
 export class MemoriaRecallTool {
-    async run(input: RecallInput): Promise<RecallOutput> {
-        logger.info({ input }, 'Recall requested');
+    @Tool({
+        description: 'Recall relevant items from archive based on current context',
+        inputClass: class RecallInputSchema {
+            // Note: LeanMCP infers schema from TS types or inputClass.
+            // For now, we rely on args type matching RecallInput interface
+            // or we could define a concrete class if validation is required by library.
+            // Using loose typing for now as per user instruction pattern.
+        }
+    })
+    async execute(input: RecallInput): Promise<RecallOutput> {
+        logger.info({ input }, 'MCP: memoria_recall invoked');
 
-        const { newItemTags, currentContext, archive } = input;
-
-        const matched = archive.filter((item) =>
-            item.tags.some((tag: string) => newItemTags.includes(tag))
-        );
-
-        const reasoning = matched.length > 0
-            ? `Found ${matched.length} items matching tags: ${newItemTags.join(', ')}`
-            : 'No matching items in archive';
-
-        logger.info({ reasoning, count: matched.length }, 'Recall complete');
-
-        return {
-            matched_items: matched.map((item) => ({
-                title: item.title,
-                source: item.source,
-                confidence: 0.9,
-                reason: `Tag match: ${newItemTags.join(', ')}`,
-            })),
-            reasoning,
-        };
+        try {
+            // Call shared engine
+            const result = await recallEngine(input);
+            logger.info({ result_count: result.matched_items.length }, 'MCP: recall complete');
+            return result;
+        } catch (err: any) {
+            logger.error({ error: err.message }, 'MCP: recall failed');
+            throw new Error(`Recall failed: ${err.message}`);
+        }
     }
 }
 
-export const memoriaRecall = new MemoriaRecallTool().run;
+// Export factory or instance
+export const memoriaRecallTool = new MemoriaRecallTool();

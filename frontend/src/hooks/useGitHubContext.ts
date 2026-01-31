@@ -6,7 +6,7 @@ export function useGitHubContext() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const mcpServerUrl = import.meta.env.REACT_APP_MCP_SERVER_URL || 'http://localhost:3001';
+    const mcpServerUrl = import.meta.env.VITE_MCP_SERVER_URL || 'http://localhost:3001';
 
     const syncContext = async () => {
         try {

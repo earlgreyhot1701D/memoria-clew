@@ -17,10 +17,39 @@ import '../styles/recall-card.css';
 
 export const Dashboard: React.FC = () => {
     const { user, loading: authLoading, login } = useAuth();
-    const { data: archiveItems } = useFirestore('archive');
-    const { data: recallCards } = useFirestore('recalls');
-    const { data: logs, add: addLog } = useFirestore('logs');
+
+    // Switch to Local State + API for reliability (bypassing Firestore Rule issues)
+    const [archiveItems, setArchiveItems] = useState<any[]>([]);
+    const [recallCards, setRecallCards] = useState<any[]>([]); // Placeholder for API integration
+    const [logs, setLogs] = useState<any[]>([]); // Local session logs
+
     const { context, syncContext, loading } = useGitHubContext();
+
+    // Helper to add logs locally
+    const addLog = (entry: any) => {
+        setLogs(prev => [{ ...entry, timestamp: new Date().toISOString() }, ...prev]);
+    };
+
+    // Fetch Archive from API
+    const fetchArchive = async () => {
+        try {
+            const res = await fetch('/api/archive');
+            if (res.ok) {
+                const json = await res.json();
+                setArchiveItems(json.data || []);
+            }
+        } catch (err) {
+            console.error('Failed to fetch archive', err);
+        }
+    };
+
+    // Initial Load
+    useEffect(() => {
+        if (user) {
+            fetchArchive();
+            addLog({ action: 'SESSION_START', details: 'Dashboard loaded' });
+        }
+    }, [user]);
 
     const {
         searchQuery,
@@ -29,7 +58,7 @@ export const Dashboard: React.FC = () => {
         setSelectedTag,
         filteredItems,
         allTags
-    } = useArchiveSearch(archiveItems || []);
+    } = useArchiveSearch(archiveItems);
 
     const [error, setError] = useState<string | null>(null);
     const [showOnboarding, setShowOnboarding] = useState(false);
@@ -53,11 +82,11 @@ export const Dashboard: React.FC = () => {
     };
 
     const handleCapture = async (input: string) => {
+        console.log('[Dashboard] handleCapture receiving:', input);
         try {
             // 1. Log start
             addLog({
                 action: 'CAPTURE_INIT',
-                timestamp: new Date().toISOString(),
                 details: input.length > 50 ? `${input.substring(0, 50)}...` : input
             });
 
@@ -75,16 +104,17 @@ export const Dashboard: React.FC = () => {
             // 3. Log success
             addLog({
                 action: 'CAPTURE_SUCCESS',
-                timestamp: new Date().toISOString(),
                 details: `ID: ${data.data.id}`
             });
+
+            // 4. Refresh Data
+            fetchArchive();
 
         } catch (err: any) {
             console.error(err);
             setError(err.message);
             addLog({
                 action: 'CAPTURE_ERROR',
-                timestamp: new Date().toISOString(),
                 details: err.message
             });
         }

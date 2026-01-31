@@ -11,13 +11,18 @@ export const CaptureBar: React.FC<CaptureBarProps> = ({ onCapture, disabled = fa
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        console.log('[CaptureBar] Submit triggered. Input:', input);
         if (!input.trim()) return;
 
         setLoading(true);
         try {
             if (onCapture) {
+                console.log('[CaptureBar] Calling onCapture...');
                 // Pass the input string up to the parent
                 await onCapture(input);
+                console.log('[CaptureBar] onCapture completed.');
+            } else {
+                console.warn('[CaptureBar] NO onCapture prop provided!');
             }
             setInput('');
         } catch (err) {

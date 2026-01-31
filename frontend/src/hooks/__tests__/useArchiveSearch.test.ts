@@ -9,7 +9,7 @@ const mockItems: ArchiveItem[] = [
         title: 'React Hooks Guide',
         summary: 'Learn about useState and useEffect',
         tags: ['react', 'javascript'],
-        type: 'article',
+        type: 'capture',
         source: 'manual',
         timestamp: 1000,
         confidence: 1,
@@ -20,7 +20,7 @@ const mockItems: ArchiveItem[] = [
         title: 'Python Data Science',
         summary: 'Pandas and NumPy basics',
         tags: ['python', 'data'],
-        type: 'article',
+        type: 'capture',
         source: 'url',
         timestamp: 2000,
         confidence: 1
@@ -30,7 +30,7 @@ const mockItems: ArchiveItem[] = [
         title: 'TypeScript Tips',
         summary: 'Advanced types and generics',
         tags: ['typescript', 'javascript'],
-        type: 'article',
+        type: 'capture',
         source: 'manual',
         timestamp: 3000,
         confidence: 1
@@ -82,6 +82,24 @@ describe('useArchiveSearch', () => {
         });
         expect(result.current.filteredItems).toHaveLength(1);
         expect(result.current.filteredItems[0].title).toBe('React Hooks Guide');
+    });
+
+    it('filters by keyword (detectedTools)', () => {
+        const itemWithTools: ArchiveItem = {
+            ...mockItems[0],
+            id: '4',
+            title: 'Tool Test',
+            detectedTools: ['Kubernetes', 'Docker']
+        };
+
+        const { result } = renderHook(() => useArchiveSearch([...mockItems, itemWithTools]));
+
+        act(() => {
+            result.current.setSearchQuery('kubernetes');
+        });
+
+        expect(result.current.filteredItems).toHaveLength(1);
+        expect(result.current.filteredItems[0].title).toBe('Tool Test');
     });
 
     it('handles empty results', () => {

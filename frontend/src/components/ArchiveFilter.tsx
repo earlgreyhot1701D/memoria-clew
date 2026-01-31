@@ -22,7 +22,15 @@ export const ArchiveFilter: React.FC<ArchiveFilterProps> = ({
                 type="text"
                 placeholder="SEARCH ARCHIVE..."
                 value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
+                onChange={(e) => {
+                    console.log('ArchiveFilter: input change', e.target.value);
+                    onSearchChange(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        e.currentTarget.blur();
+                    }
+                }}
                 className="mono"
                 style={{
                     width: '100%',

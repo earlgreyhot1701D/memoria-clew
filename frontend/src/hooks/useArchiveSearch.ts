@@ -14,17 +14,21 @@ export function useArchiveSearch(items: ArchiveItem[]) {
     }, [items]);
 
     const filteredItems = useMemo(() => {
-        return items.filter(item => {
+        console.log('useArchiveSearch: filtering...', { query: searchQuery, totalItems: items.length });
+        const results = items.filter(item => {
             const matchesTag = selectedTag ? item.tags?.includes(selectedTag) : true;
 
             const query = searchQuery.toLowerCase();
             const matchesSearch = !searchQuery ||
-                item.title.toLowerCase().includes(query) ||
-                item.summary.toLowerCase().includes(query) ||
-                (item.content && item.content.toLowerCase().includes(query));
+                (item.title && item.title.toLowerCase().includes(query)) ||
+                (item.summary && item.summary.toLowerCase().includes(query)) ||
+                (item.content && item.content.toLowerCase().includes(query)) ||
+                (item.detectedTools && item.detectedTools.some(tool => tool.toLowerCase().includes(query)));
 
             return matchesTag && matchesSearch;
         });
+        console.log('useArchiveSearch: results found', results.length);
+        return results;
     }, [items, selectedTag, searchQuery]);
 
     return {

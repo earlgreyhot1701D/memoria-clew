@@ -1,24 +1,25 @@
 import React, { useState } from 'react';
+import { useCapture } from '../hooks/useCapture';
 
 interface CaptureBarProps {
-    onCapture: (input: string) => Promise<void>;
+    onCapture?: (data: any) => void;
     disabled?: boolean;
 }
 
 export const CaptureBar: React.FC<CaptureBarProps> = ({ onCapture, disabled = false }) => {
     const [input, setInput] = useState('');
-    const [loading, setLoading] = useState(false);
+    const { captureUrl, loading } = useCapture();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim()) return;
 
         try {
-            setLoading(true);
-            await onCapture(input);
+            const result = await captureUrl(input);
             setInput('');
-        } finally {
-            setLoading(false);
+            if (onCapture) onCapture(result);
+        } catch (err) {
+            console.error('Capture error', err);
         }
     };
 

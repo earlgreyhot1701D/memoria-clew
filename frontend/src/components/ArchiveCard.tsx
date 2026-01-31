@@ -21,5 +21,24 @@ export const ArchiveCard: React.FC<ArchiveCardProps> = ({ item }) => (
         <p style={{ fontSize: '12px', color: '#555', marginTop: '5px' }}>
             {item.summary}
         </p>
-    </article>
+        <div style={{ marginTop: '10px' }}>
+            {item.tags?.map((tag) => (
+                <span
+                    key={tag}
+                    className="tag"
+                    style={{
+                        display: 'inline-block',
+                        padding: '2px 6px',
+                        background: '#000',
+                        color: '#fff',
+                        fontSize: '9px',
+                        marginRight: '5px',
+                        borderRadius: '2px',
+                    }}
+                >
+                    {tag}
+                </span>
+            ))}
+        </div>
+    </article >
 );

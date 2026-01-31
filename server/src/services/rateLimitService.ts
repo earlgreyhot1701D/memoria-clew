@@ -23,15 +23,21 @@ export const rateLimiterRecall = new RateLimiterMemory({
     duration: 60,
 });
 
+export const rateLimiterCapture = new RateLimiterMemory({
+    points: 20,
+    duration: 60,
+});
+
 export async function checkRateLimit(
-    limiterId: 'gemini' | 'github' | 'mcp' | 'recall',
+    limiterId: 'gemini' | 'github' | 'mcp' | 'recall' | 'capture',
     key: string
 ): Promise<{ allowed: boolean; remaining: number; resetSeconds: number }> {
     const limiter =
         limiterId === 'gemini' ? rateLimiterGemini :
             limiterId === 'github' ? rateLimiterGitHub :
                 limiterId === 'mcp' ? rateLimiterMCP :
-                    rateLimiterRecall;
+                    limiterId === 'capture' ? rateLimiterCapture :
+                        rateLimiterRecall;
 
 
     try {

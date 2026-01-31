@@ -7,6 +7,8 @@ import { recallEngine } from './services/recallEngine.js';
 import { pino } from 'pino';
 import { seedGitHubContext, getGitHubContext } from './services/githubService.js';
 import { checkRateLimit } from './services/rateLimitService.js';
+import { captureItem, getArchive } from './services/captureService.js';
+
 
 const logger = pino();
 
@@ -18,6 +20,61 @@ setupSecurityMiddleware(app);
 app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
 });
+
+// ━━━━━━━━━━━━━━━━ CAPTURE API ━━━━━━━━━━━━━━━━
+
+app.post('/api/capture', async (req, res) => {
+    try {
+        const { url } = req.body;
+        // In this MVP 'url' parameter contains either URL or raw text input
+        if (!url) {
+            return res.status(400).json({ error: 'Content required' });
+        }
+
+        const rateLimit = await checkRateLimit('capture', 'user');
+        if (!rateLimit.allowed) {
+            return res.status(429).json({
+                error: 'Rate limit exceeded',
+                resetSeconds: rateLimit.resetSeconds,
+            });
+        }
+
+        // Hardcoded user for MVP - implementing full auth middleware later
+        const userId = 'current-user';
+        const archiveItem = await captureItem(userId, url);
+
+        res.json({
+            success: true,
+            data: archiveItem,
+            message: 'Content captured and archived',
+        });
+    } catch (err: any) {
+        logger.error({ error: err.message }, 'Capture failed');
+        res.status(500).json({
+            error: 'Capture failed',
+            details: err.message,
+        });
+    }
+});
+
+app.get('/api/archive', async (req, res) => {
+    try {
+        const userId = 'current-user';
+        const items = await getArchive(userId);
+
+        res.json({
+            success: true,
+            data: items,
+        });
+    } catch (err: any) {
+        logger.error({ error: err.message }, 'Archive fetch failed');
+        res.status(500).json({
+            error: 'Failed to fetch archive',
+            details: err.message,
+        });
+    }
+});
+
 
 // ━━━━━━━━━━━━━━ GITHUB CONTEXT (Stage 1) ━━━━━━━━━━━━
 

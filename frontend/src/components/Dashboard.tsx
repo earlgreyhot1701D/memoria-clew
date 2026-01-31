@@ -7,8 +7,10 @@ import { StatusBar } from './StatusBar';
 import { CaptureBar } from './CaptureBar';
 import { RecallCard } from './RecallCard';
 import { ArchiveCard } from './ArchiveCard';
+import { ArchiveFilter } from './ArchiveFilter';
 import { SystemLog } from './SystemLog';
 import { ErrorBanner } from './ErrorBanner';
+import { useArchiveSearch } from '../hooks/useArchiveSearch';
 import '../styles/dashboard.css';
 import '../styles/recall-card.css';
 
@@ -18,6 +20,15 @@ export const Dashboard: React.FC = () => {
     const { data: recallCards } = useFirestore('recalls');
     const { data: logs } = useFirestore('logs');
     const { context, syncContext, loading } = useGitHubContext();
+
+    const {
+        searchQuery,
+        setSearchQuery,
+        selectedTag,
+        setSelectedTag,
+        filteredItems,
+        allTags
+    } = useArchiveSearch(archiveItems || []);
 
     const [error, setError] = useState<string | null>(null);
 
@@ -124,6 +135,19 @@ export const Dashboard: React.FC = () => {
                     aria-label="Knowledge archive"
                 >
                     <h2 className="mono">KNOWLEDGE_ARCHIVE</h2>
+
+                    <ArchiveFilter
+                        tags={allTags}
+                        selectedTag={selectedTag}
+                        searchQuery={searchQuery}
+                        onSearchChange={setSearchQuery}
+                        onTagSelect={setSelectedTag}
+                    />
+
+                    <div className="mono" style={{ fontSize: '10px', marginBottom: '10px', color: '#666' }}>
+                        ITEMS: {filteredItems.length}
+                    </div>
+
                     <div
                         style={{
                             display: 'grid',
@@ -133,9 +157,19 @@ export const Dashboard: React.FC = () => {
                         }}
                         role="list"
                     >
-                        {archiveItems?.map((item) => (
-                            <ArchiveCard key={item.id} item={item} />
-                        ))}
+                        {filteredItems.length === 0 ? (
+                            <p className="mono" style={{ gridColumn: '1 / -1', padding: '20px', textAlign: 'center', color: '#888' }}>
+                                NO_ITEMS_FOUND
+                            </p>
+                        ) : (
+                            filteredItems.map((item) => (
+                                <ArchiveCard
+                                    key={item.id}
+                                    item={item}
+                                    onTagSelect={setSelectedTag}
+                                />
+                            ))
+                        )}
                     </div>
                 </section>
             </div>

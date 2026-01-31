@@ -15,6 +15,7 @@ export interface ArchiveItem {
     content?: string;
     summary: string;
     tags: string[];
+    detectedTools?: string[];
     source: 'url' | 'manual' | 'hn';
     timestamp: number;
     type: 'capture' | 'recall_result';
@@ -52,35 +53,52 @@ async function fetchUrlContent(url: string): Promise<{ title: string; content: s
     }
 }
 
-async function summarizeWithGemini(content: string, isUrl: boolean): Promise<{ summary: string; tags: string[] }> {
+async function summarizeWithGemini(content: string, isUrl: boolean): Promise<{ summary: string; tags: string[]; detectedTools: string[] }> {
     try {
         const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-        const prompt = `Analyze the following content (which may be a raw text snippet or extracted web page text) and:
-1. Write a concise 1-2 sentence summary.
-2. Extract 3-5 relevant technical or topic tags (lowercase).
+        const prompt = `You are an expert technical analyst. Extract structured data from the content below.
+
+STRICT REQUIREMENTS:
+1. **software_tools**: List ALL software, libraries, frameworks, APIs, or specific tools mentioned.
+   - Return clean names (e.g. "React" not "React.js", "PostgreSQL" not "Postgres").
+   - If NONE are found, return [].
+2. **topics**: Extract 3-5 high-level CONCEPT tags only.
+   - Do NOT repeat valid tools here. Use broad terms like "database", "devops", "frontend".
+3. **summary**: 1-2 sentence technical summary.
 
 Content:
 ${content}
 
-Respond STRICTLY in JSON format:
+Example Output:
 {
-  "summary": "...",
-  "tags": ["tag1", "tag2", ...]
-}`;
+  "summary": "Overview of using React with Firebase.",
+  "software_tools": ["React", "Firebase"],
+  "topics": ["frontend", "backend-as-a-service"]
+}
+
+Respond STRICTLY in JSON.`;
 
         const result = await model.generateContent(prompt);
         const text = result.response.text();
+        // Debug log
+        logger.info({ rawGemini: text }, 'Gemini Response');
 
         const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleanText);
 
-        return JSON.parse(cleanText);
+        return {
+            summary: parsed.summary || 'No summary available.',
+            tags: parsed.topics || [],
+            detectedTools: parsed.software_tools || [],
+        };
     } catch (err: any) {
         logger.error({ error: err.message }, 'Gemini summarization failed');
         // Fallback
         return {
             summary: isUrl ? 'Content captured (Summarization unavailable)' : content.slice(0, 100) + '...',
             tags: ['capture', 'manual'],
+            detectedTools: [],
         };
     }
 }
@@ -110,11 +128,15 @@ export async function captureItem(userId: string, input: string): Promise<Archiv
     }
 
     // Summarize
-    let summaryData = { summary: content, tags: [] as string[] };
+    let summaryData = { summary: content, tags: [] as string[], detectedTools: [] as string[] };
     try {
         summaryData = await summarizeWithGemini(content, !!isUrl);
         await logEvent(userId, 'capture', 'success', `SUMMARY_CREATED (model: gemini-2.5-flash)`);
         await logEvent(userId, 'capture', 'success', `TAGS_EXTRACTED: ${JSON.stringify(summaryData.tags)}`);
+
+        if (summaryData.detectedTools && summaryData.detectedTools.length > 0) {
+            await logEvent(userId, 'capture', 'success', `TOOLS_DETECTED: ${JSON.stringify(summaryData.detectedTools)}`);
+        }
     } catch (err) {
         // Fallback handled
     }
@@ -124,6 +146,7 @@ export async function captureItem(userId: string, input: string): Promise<Archiv
         ...(isUrl ? { url: input } : { content }),
         summary: summaryData.summary,
         tags: summaryData.tags,
+        detectedTools: summaryData.detectedTools,
         source,
         timestamp: Date.now(),
         type: 'capture',
@@ -145,6 +168,7 @@ export async function getArchive(userId: string, limit: number = 50): Promise<Ar
 
     return snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
-    } as ArchiveItem));
+        ...doc.data() as Omit<ArchiveItem, 'id'>
+    }));
 }
+

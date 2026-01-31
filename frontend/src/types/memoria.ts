@@ -18,6 +18,8 @@ export const ArchiveItemSchema = z.object({
     timestamp: z.number(),
     confidence: z.number().min(0).max(1),
     url: z.string().optional(),
+    content: z.string().optional(),
+    detectedTools: z.array(z.string()).optional(),
 });
 export type ArchiveItem = z.infer<typeof ArchiveItemSchema>;
 

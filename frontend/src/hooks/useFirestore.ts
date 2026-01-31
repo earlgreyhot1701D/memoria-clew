@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { db } from '../firebase.config';
 import {
     collection,
@@ -46,6 +46,24 @@ export function useFirestore(collectionName: string) {
         },
         [collectionName]
     );
+
+    useEffect(() => {
+        setLoading(true);
+        const unsubscribe = onSnapshot(
+            collection(db, collectionName),
+            (snapshot) => {
+                const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+                setData(items);
+                setLoading(false);
+            },
+            (err) => {
+                console.error(err);
+                setError(err.message);
+                setLoading(false);
+            }
+        );
+        return () => unsubscribe();
+    }, [collectionName]);
 
     return { data, loading, error, fetch, add, subscribe };
 }

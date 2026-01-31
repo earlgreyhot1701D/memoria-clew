@@ -19,7 +19,7 @@ export const Header: React.FC<HeaderProps> = ({ contextStatus, scanReady }) => (
                     }}
                     aria-hidden="true"
                 />
-                MEMORIA: READY // SCAN_READY: {scanReady ? 'TRUE' : 'FALSE'}
+                MEMORIA: READY // SCAN_READY ({scanReady ? 'MANUAL' : 'INIT'})
             </div>
             <h1 className="dot-title mono">MEMORIA CLEW</h1>
         </div>

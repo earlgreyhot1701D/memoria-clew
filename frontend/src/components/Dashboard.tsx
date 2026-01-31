@@ -89,9 +89,15 @@ export const Dashboard: React.FC = () => {
                             className="card"
                             style={{ marginBottom: '15px', padding: '15px' }}
                         >
-                            <h3 className="mono" style={{ fontSize: '13px', fontWeight: 'bold' }}>
+                            <a
+                                href={repo.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mono"
+                                style={{ fontSize: '13px', fontWeight: 'bold', color: '#00FF00', textDecoration: 'none' }}
+                            >
                                 {repo.repoName}
-                            </h3>
+                            </a>
                             <p className="mono" style={{ fontSize: '9px', marginTop: '5px', color: '#ff0033' }}>
                                 TAGS: {repo.tags.join(', ')}
                             </p>

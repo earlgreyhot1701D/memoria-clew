@@ -101,6 +101,7 @@ export async function captureItem(userId: string, input: string): Promise<Archiv
             const fetched = await fetchUrlContent(input);
             title = fetched.title;
             content = fetched.content;
+            await logEvent(userId, 'capture', 'success', `EXTRACTING_CONTENT... (${content.length} chars)`);
         } catch (err: any) {
             await logEvent(userId, 'capture', 'failure', `URL Fetch failed: ${err.message}`);
             title = input;
@@ -112,6 +113,8 @@ export async function captureItem(userId: string, input: string): Promise<Archiv
     let summaryData = { summary: content, tags: [] as string[] };
     try {
         summaryData = await summarizeWithGemini(content, !!isUrl);
+        await logEvent(userId, 'capture', 'success', `SUMMARY_CREATED (model: gemini-2.5-flash)`);
+        await logEvent(userId, 'capture', 'success', `TAGS_EXTRACTED: ${JSON.stringify(summaryData.tags)}`);
     } catch (err) {
         // Fallback handled
     }

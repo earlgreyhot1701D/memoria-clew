@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useCapture } from '../hooks/useCapture';
 
 interface CaptureBarProps {
     onCapture?: (data: any) => void;
@@ -8,18 +7,23 @@ interface CaptureBarProps {
 
 export const CaptureBar: React.FC<CaptureBarProps> = ({ onCapture, disabled = false }) => {
     const [input, setInput] = useState('');
-    const { captureUrl, loading } = useCapture();
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim()) return;
 
+        setLoading(true);
         try {
-            const result = await captureUrl(input);
+            if (onCapture) {
+                // Pass the input string up to the parent
+                await onCapture(input);
+            }
             setInput('');
-            if (onCapture) onCapture(result);
         } catch (err) {
             console.error('Capture error', err);
+        } finally {
+            setLoading(false);
         }
     };
 

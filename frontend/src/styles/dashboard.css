@@ -70,6 +70,9 @@ body {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
   padding: 24px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Status Bar */

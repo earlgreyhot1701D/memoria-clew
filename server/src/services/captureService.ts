@@ -18,7 +18,7 @@ export interface ArchiveItem {
     detectedTools?: string[];
     source: 'url' | 'manual' | 'hn';
     timestamp: number;
-    type: 'capture' | 'recall_result';
+    type: 'capture' | 'recall_result' | 'doc' | 'docs';
 }
 
 async function fetchUrlContent(url: string): Promise<{ title: string; content: string }> {
@@ -130,6 +130,7 @@ export async function captureItem(userId: string, input: string): Promise<Archiv
     // Summarize
     let summaryData = { summary: content, tags: [] as string[], detectedTools: [] as string[] };
     try {
+        await logEvent(userId, 'capture', 'success', `SENDING_TO_GEMINI: ${content.substring(0, 50)}...`);
         summaryData = await summarizeWithGemini(content, !!isUrl);
         await logEvent(userId, 'capture', 'success', `SUMMARY_CREATED (model: gemini-2.5-flash)`);
         await logEvent(userId, 'capture', 'success', `TAGS_EXTRACTED: ${JSON.stringify(summaryData.tags)}`);

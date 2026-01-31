@@ -9,8 +9,7 @@ interface ArchiveCardProps {
 
 export const ArchiveCard: React.FC<ArchiveCardProps> = ({ item, onTagSelect }) => (
     <article
-        className="card"
-        style={{ border: '1px solid #ddd' }}
+        className={`card archive-item ${item.type === 'doc' || item.type === 'docs' ? 'dashed' : ''}`}
         role="listitem"
     >
         <div className="mono" style={{ fontSize: '9px', marginBottom: '10px', color: '#ff0033' }}>
@@ -34,7 +33,7 @@ export const ArchiveCard: React.FC<ArchiveCardProps> = ({ item, onTagSelect }) =
             {new Date(item.timestamp).toLocaleDateString()} • {item.source.toUpperCase()}
         </div>
         <p style={{ fontSize: '12px', color: '#555', marginTop: '5px' }}>
-            {item.summary}
+            {typeof item.summary === 'object' ? JSON.stringify(item.summary) : item.summary}
         </p>
         <div style={{ marginTop: '10px' }}>
             {item.tags?.map((tag) => (

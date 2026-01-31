@@ -19,7 +19,7 @@ export const Dashboard: React.FC = () => {
     const { user, loading: authLoading, login } = useAuth();
     const { data: archiveItems } = useFirestore('archive');
     const { data: recallCards } = useFirestore('recalls');
-    const { data: logs } = useFirestore('logs');
+    const { data: logs, add: addLog } = useFirestore('logs');
     const { context, syncContext, loading } = useGitHubContext();
 
     const {
@@ -50,6 +50,44 @@ export const Dashboard: React.FC = () => {
         // Resetting allows user to see it again manually
         localStorage.removeItem('memoria_onboarding_seen');
         setShowOnboarding(true);
+    };
+
+    const handleCapture = async (input: string) => {
+        try {
+            // 1. Log start
+            addLog({
+                action: 'CAPTURE_INIT',
+                timestamp: new Date().toISOString(),
+                details: input.length > 50 ? `${input.substring(0, 50)}...` : input
+            });
+
+            // 2. Call API
+            const res = await fetch('/api/capture', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: input })
+            });
+
+            if (!res.ok) throw new Error('Capture failed');
+
+            const data = await res.json();
+
+            // 3. Log success
+            addLog({
+                action: 'CAPTURE_SUCCESS',
+                timestamp: new Date().toISOString(),
+                details: `ID: ${data.data.id}`
+            });
+
+        } catch (err: any) {
+            console.error(err);
+            setError(err.message);
+            addLog({
+                action: 'CAPTURE_ERROR',
+                timestamp: new Date().toISOString(),
+                details: err.message
+            });
+        }
     };
 
     if (authLoading) {
@@ -91,11 +129,7 @@ export const Dashboard: React.FC = () => {
                         </div>
                     </div>
 
-                    <CaptureBar
-                        onCapture={async (input) => {
-                            console.log('Capturing:', input);
-                        }}
-                    />
+                    <CaptureBar onCapture={handleCapture} />
                 </section>
 
                 {error && (
@@ -177,12 +211,7 @@ export const Dashboard: React.FC = () => {
                     </div>
 
                     <div
-                        style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(3, 1fr)',
-                            gap: '20px',
-                            marginTop: '20px',
-                        }}
+                        className="archive-grid"
                         role="list"
                     >
                         {filteredItems.length === 0 ? (

@@ -13,7 +13,7 @@ export const ArchiveItemSchema = z.object({
     title: z.string(),
     summary: z.string(),
     tags: z.array(z.string()),
-    type: z.enum(['capture', 'recall_result']),
+    type: z.enum(['capture', 'recall_result', 'doc', 'docs']),
     source: z.string(),
     timestamp: z.number(),
     confidence: z.number().min(0).max(1),

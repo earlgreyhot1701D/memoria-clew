@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useFirestore } from '../hooks/useFirestore';
 import { useGitHubContext } from '../hooks/useGitHubContext';
@@ -10,6 +10,7 @@ import { ArchiveCard } from './ArchiveCard';
 import { ArchiveFilter } from './ArchiveFilter';
 import { SystemLog } from './SystemLog';
 import { ErrorBanner } from './ErrorBanner';
+import { OnboardingTooltip } from './OnboardingTooltip';
 import { useArchiveSearch } from '../hooks/useArchiveSearch';
 import '../styles/dashboard.css';
 import '../styles/recall-card.css';
@@ -31,6 +32,25 @@ export const Dashboard: React.FC = () => {
     } = useArchiveSearch(archiveItems || []);
 
     const [error, setError] = useState<string | null>(null);
+    const [showOnboarding, setShowOnboarding] = useState(false);
+
+    useEffect(() => {
+        const seen = localStorage.getItem('memoria_onboarding_seen');
+        if (!seen) {
+            setShowOnboarding(true);
+        }
+    }, []);
+
+    const handleDismissOnboarding = () => {
+        localStorage.setItem('memoria_onboarding_seen', 'true');
+        setShowOnboarding(false);
+    };
+
+    const handleShowOnboarding = () => {
+        // Resetting allows user to see it again manually
+        localStorage.removeItem('memoria_onboarding_seen');
+        setShowOnboarding(true);
+    };
 
     if (authLoading) {
         return <div className="mono">LOADING...</div>;
@@ -82,7 +102,15 @@ export const Dashboard: React.FC = () => {
                     <ErrorBanner message={error} onDismiss={() => setError(null)} />
                 )}
 
-                <Header contextStatus="ok" scanReady={true} />
+                <Header
+                    contextStatus="ok"
+                    scanReady={true}
+                    onShowOnboarding={handleShowOnboarding}
+                />
+
+                {showOnboarding && (
+                    <OnboardingTooltip onDismiss={handleDismissOnboarding} />
+                )}
 
                 <aside aria-label="Build context">
                     <h2 className="mono">BUILD_CONTEXT</h2>

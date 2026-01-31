@@ -28,9 +28,14 @@ export const Header: React.FC<HeaderProps> = ({ contextStatus, scanReady, onShow
                 <div className="mono" style={{ fontSize: '12px', color: '#666666', marginBottom: '5px' }}>
                     Remember everything. Find anything.
                 </div>
-                <div style={{ fontSize: '11px', fontStyle: 'italic', color: '#999999', fontFamily: 'Inter, sans-serif' }}>
+                <a
+                    href="https://github.com/earlgreyhot1701D/memoria-clew"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="tagline-link"
+                >
                     "Let's separate signal from hype with a cool head and a sharp knife."
-                </div>
+                </a>
             </div>
         </div>
         <div className="mono" style={{ fontSize: '11px', textAlign: 'right' }}>

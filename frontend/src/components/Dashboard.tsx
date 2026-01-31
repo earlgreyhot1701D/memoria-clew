@@ -94,7 +94,7 @@ export const Dashboard: React.FC = () => {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="mono"
-                                style={{ fontSize: '13px', fontWeight: 'bold', color: '#00FF00', textDecoration: 'none' }}
+                                style={{ fontSize: '13px', fontWeight: 'bold', color: '#007bff', textDecoration: 'none' }}
                             >
                                 {repo.repoName}
                             </a>

@@ -3,6 +3,7 @@ import express from 'express';
 import { createHTTPServer } from '@leanmcp/core';
 import { setupSecurityMiddleware } from './middleware/securityMiddleware.js';
 import { memoriaRecallTool } from './tools/memoriaRecall.js';
+import MemoriaPatternsToolInstance from './tools/memoriaPatterns.js';
 // import { recallEngine } from './services/recallEngine.js'; // Removed in Phase 4
 import { pino } from 'pino';
 import { seedGitHubContext, getGitHubContext } from './services/githubService.js';
@@ -72,6 +73,31 @@ app.get('/api/archive', async (req, res) => {
         res.status(500).json({
             error: 'Failed to fetch archive',
             details: err.message,
+        });
+    }
+});
+
+
+// NEW ENDPOINT: Pattern Analysis
+app.get('/api/patterns', async (req, res) => {
+    try {
+        const userId = req.headers['x-user-id'] as string;
+        if (!userId) {
+            return res.status(400).json({ error: 'x-user-id header required' });
+        }
+
+        const { analyzeResearchPatterns } = await import('./services/patternAnalysisService.js');
+        const patterns = await analyzeResearchPatterns(userId);
+
+        res.json({
+            success: true,
+            data: patterns
+        });
+    } catch (err: any) {
+        logger.error({ error: err.message }, 'Pattern analysis endpoint failed');
+        res.status(500).json({
+            success: false,
+            error: 'Pattern analysis failed'
         });
     }
 });
@@ -271,7 +297,8 @@ await createHTTPServer({
     version: '1.0.0',
     port: parseInt(process.env.MCP_PORT || '3001'),
     serviceFactories: {
-        memoria_recall: () => memoriaRecallTool
+        memoria_recall: () => memoriaRecallTool,
+        memoria_patterns: () => MemoriaPatternsToolInstance
     }
 });
 
@@ -285,8 +312,8 @@ logger.info(
     {
         mcp_port: process.env.MCP_PORT || 3001,
         rest_port: REST_PORT,
-        endpoints: ['/health', '/api/context/sync', '/api/context', '/api/recall'],
-        mcp_tools: ['memoria_recall'],
+        endpoints: ['/health', '/api/context/sync', '/api/context', '/api/recall', '/api/patterns'],
+        mcp_tools: ['memoria_recall', 'memoria_patterns'],
     },
     '✓ Memoria server running (REST + MCP)'
 );

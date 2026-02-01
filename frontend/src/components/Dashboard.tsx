@@ -133,6 +133,14 @@ export const Dashboard: React.FC = () => {
         recall(activeTags, "Active dashboard session");
     };
 
+    // Auto-trigger "Intelligence Stream" when context loads
+    useEffect(() => {
+        if (context && !recallLoading && matches.length === 0) {
+            console.log('[Dashboard] Auto-triggering Intelligence Stream');
+            handleRecall();
+        }
+    }, [context]);
+
     if (authLoading) {
         return <div className="mono">LOADING...</div>;
     }
@@ -222,11 +230,22 @@ export const Dashboard: React.FC = () => {
                 </aside>
 
                 <main id="main-content" aria-label="Main content">
-                    {/* SMART RECALL SECTION */}
+                    {/* INTELLIGENCE STREAM SECTION */}
                     <section className="card" style={{ marginTop: '20px' }}>
-                        <h2 className="mono">SMART_RECALL</h2>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <h2 className="mono" style={{ margin: 0 }}>INTELLIGENCE_STREAM</h2>
+                            <button
+                                onClick={handleRecall}
+                                disabled={recallLoading}
+                                className="btn-minimal mono"
+                                style={{ fontSize: '10px', padding: '2px 6px' }}
+                            >
+                                {recallLoading ? 'REFRESHING...' : 'REFRESH'}
+                            </button>
+                        </div>
 
-                        <button
+                        {/* 
+                        <button 
                             onClick={handleRecall}
                             disabled={recallLoading}
                             className="btn-black mono"
@@ -234,6 +253,7 @@ export const Dashboard: React.FC = () => {
                         >
                             {recallLoading ? 'RECALLING...' : 'TRIGGER RECALL'}
                         </button>
+                        */}
 
                         {explanation && (
                             <div className="mono" style={{ fontSize: '10px', marginTop: '10px', color: '#0056b3', padding: '5px' }}>

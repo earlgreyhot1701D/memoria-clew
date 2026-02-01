@@ -1,109 +1,59 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { db } from './firestoreService.js';
 import { logEvent } from './systemLogService.js';
 import { pino } from 'pino';
+import { summarizeContent } from './llmService.js';
 
 const logger = pino();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export interface ArchiveItem {
-    id: string;
+    id: string; // Internal ID
+    userId?: string; // Optional for generic archives (like seeded repos)
     title: string;
     url?: string;
     content?: string;
     summary: string;
     tags: string[];
-    detectedTools?: string[];
-    source: 'url' | 'manual' | 'hn';
+    detectedTools: string[];
+    source: 'manual' | 'extension' | 'url' | 'github' | 'hn'; // Added 'hn' to match RecallMatch
     timestamp: number;
-    type: 'capture' | 'recall_result' | 'doc' | 'docs';
+    type: 'capture' | 'chat_log' | 'context';
+    sourceUrl?: string; // Link to original source (URL or GitHub repo)
 }
 
-async function fetchUrlContent(url: string): Promise<{ title: string; content: string }> {
-    try {
-        const response = await axios.get(url, {
-            timeout: 10000,
-            headers: {
-                'User-Agent': 'MemoriaClew/1.0 (ResearchTool)',
-            },
-        });
-
-        const $ = cheerio.load(response.data);
-
-        // Remove script, style, and interface elements
-        $('script, style, nav, footer, header, noscript').remove();
-
-        const title = $('title').text().trim() || url;
-
-        // simple text extraction
-        let text = '';
-        $('h1, h2, h3, p, li').each((_, el) => {
-            text += $(el).text().trim() + '\n';
-        });
-
-        // cleaner whitespace
-        text = text.replace(/\s+/g, ' ').trim();
-
-        return { title, content: text.slice(0, 3000) }; // Limit to 3000 chars for API
-    } catch (err: any) {
-        logger.warn({ url, error: err.message }, 'Failed to fetch URL content');
-        throw new Error(`Failed to fetch URL: ${err.message}`);
+export async function getArchive(userId?: string, limit?: number): Promise<ArchiveItem[]> {
+    let query: FirebaseFirestore.Query = db.collection('archive').orderBy('timestamp', 'desc');
+    if (userId) {
+        query = query.where('userId', '==', userId);
     }
+    if (limit) {
+        query = query.limit(limit);
+    }
+    const snapshot = await query.get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ArchiveItem));
 }
 
-async function summarizeWithGemini(content: string, isUrl: boolean): Promise<{ summary: string; tags: string[]; detectedTools: string[]; title?: string }> {
+// Fetch content from URL using axios + cheerio
+async function fetchUrlContent(url: string): Promise<{ title: string, content: string }> {
     try {
-        // Updated to latest experimental model as requested
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+        const { data } = await axios.get(url, {
+            timeout: 10000,
+            headers: { 'User-Agent': 'Memoria-Recall-Agent/1.0' }
+        });
+        const $ = cheerio.load(data);
 
-        const prompt = `You are an expert technical analyst. Extract structured data from the content below.
+        // Remove scripts, styles, etc.
+        $('script, style, nav, footer, iframe, noscript').remove();
 
-STRICT REQUIREMENTS:
-1. **title**: Generate a concise (3-6 words) descriptive title. This is REQUIRED.
-2. **software_tools**: List ALL software, libraries, frameworks, APIs, or specific tools mentioned.
-   - Return clean names (e.g. "React" not "React.js", "PostgreSQL" not "Postgres").
-   - If NONE are found, return [].
-3. **topics**: Extract 3-5 high-level CONCEPT tags only.
-   - Do NOT repeat valid tools here. Use broad terms like "database", "devops", "frontend".
-4. **summary**: 1-2 sentence technical summary.
+        const title = $('title').text().trim() || 'No Title';
+        // Get text from body, collapse whitespace
+        const content = $('body').text().replace(/\s+/g, ' ').trim().substring(0, 5000); // Limit to 5k chars
 
-Content:
-${content}
-
-Example Output:
-{
-  "title": "React with Firebase Overview",
-  "summary": "Overview of using React with Firebase.",
-  "software_tools": ["React", "Firebase"],
-  "topics": ["frontend", "backend-as-a-service"]
-}
-
-Respond STRICTLY in JSON.`;
-
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
-        // Debug log
-        logger.info({ rawGemini: text }, 'Gemini Response');
-
-        const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsed = JSON.parse(cleanText);
-
-        return {
-            title: parsed.title, // Prioritized extraction
-            summary: parsed.summary || 'No summary available.',
-            tags: parsed.topics || [],
-            detectedTools: parsed.software_tools || [],
-        };
+        return { title, content };
     } catch (err: any) {
-        logger.error({ error: err.message }, 'Gemini summarization failed');
-        // Fallback
-        return {
-            summary: isUrl ? 'Content captured (Summarization unavailable)' : content.slice(0, 100) + '...',
-            tags: ['capture', 'manual'],
-            detectedTools: [],
-        };
+        logger.error({ error: err.message }, 'URL Fetch failed');
+        throw new Error(`Failed to fetch URL: ${err.message}`);
     }
 }
 
@@ -131,17 +81,24 @@ export async function captureItem(userId: string, input: string): Promise<Archiv
         }
     }
 
-    // Summarize
-    let summaryData: { summary: string; tags: string[]; detectedTools: string[]; title?: string } = {
+    // Summarize via Multi-LLM Service
+    // Summarize via Multi-LLM Service
+    let summaryData: {
+        summary: string;
+        tags: string[];
+        detectedTools: string[];
+        title?: string;
+    } = {
         summary: content,
         tags: [],
         detectedTools: [],
         title: undefined
     };
+
     try {
-        await logEvent(userId, 'capture', 'success', `SENDING_TO_GEMINI: ${content.substring(0, 50)}...`);
-        summaryData = await summarizeWithGemini(content, !!isUrl);
-        await logEvent(userId, 'capture', 'success', `SUMMARY_CREATED (model: gemini-2.0-flash-exp)`);
+        await logEvent(userId, 'capture', 'success', `SENDING_TO_LLM: ${content.substring(0, 50)}...`);
+        summaryData = await summarizeContent(content, !!isUrl);
+        await logEvent(userId, 'capture', 'success', `SUMMARY_CREATED`);
         await logEvent(userId, 'capture', 'success', `TAGS_EXTRACTED: ${JSON.stringify(summaryData.tags)}`);
 
         if (summaryData.detectedTools && summaryData.detectedTools.length > 0) {
@@ -152,12 +109,12 @@ export async function captureItem(userId: string, input: string): Promise<Archiv
         if (!isUrl && summaryData.title) {
             title = summaryData.title;
         }
-
     } catch (err) {
-        // Fallback handled
+        // Fallback handled inside llmService, but safe catch here too
     }
 
     const item: Omit<ArchiveItem, 'id'> = {
+        userId,
         title,
         ...(isUrl ? { url: input } : { content }),
         summary: summaryData.summary,
@@ -166,25 +123,12 @@ export async function captureItem(userId: string, input: string): Promise<Archiv
         source,
         timestamp: Date.now(),
         type: 'capture',
-        // userId: userId - add if we want to filter later, but for MVP keep it simple
+        ...(isUrl ? { sourceUrl: input } : {})
     };
 
     // Use root collection 'archive' to match frontend useFirestore('archive')
     const ref = await db.collection('archive').add(item);
-
     await logEvent(userId, 'capture', 'success', `Stored item: ${title}`);
 
     return { id: ref.id, ...item };
 }
-
-export async function getArchive(userId: string, limit: number = 50): Promise<ArchiveItem[]> {
-    // For MVP, if we move to root, we just get them all. 
-    const ref = db.collection('archive');
-    const snapshot = await ref.orderBy('timestamp', 'desc').limit(limit).get();
-
-    return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data() as Omit<ArchiveItem, 'id'>
-    }));
-}
-

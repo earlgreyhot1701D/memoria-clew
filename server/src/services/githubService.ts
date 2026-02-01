@@ -136,6 +136,44 @@ export async function seedGitHubContext(
             cached: true,
         });
 
+        // ========== NEW CODE: Add repos as archive items for recall ==========
+        logger.info({ action: 'CONVERTING_GITHUB_REPOS_TO_ARCHIVE' }, 'Starting...');
+
+        for (const repo of contextData) {
+            const archiveItem = {
+                id: `github-${repo.id}`,  // Prefix to avoid ID conflicts
+                userId: githubUsername,   // CRITICAL: Associate with user
+                title: repo.repoName,
+                summary: repo.description || `GitHub repository: ${repo.repoName}`,
+                url: repo.url,
+                source: 'github' as const,
+                tags: repo.tags,
+                detectedTools: repo.tags,  // For GitHub repos, tools = tags
+                timestamp: Date.now(),
+                sourceUrl: repo.url,
+                type: 'capture' as const
+            };
+
+            try {
+                await db.collection('archive').doc(archiveItem.id).set(archiveItem);
+                logger.info(
+                    { repo: repo.repoName, tags: repo.tags.length },
+                    'Added GitHub repo to archive for recall'
+                );
+            } catch (err: any) {
+                logger.error(
+                    { repo: repo.repoName, error: err.message },
+                    'Failed to add repo to archive'
+                );
+            }
+        }
+
+        logger.info(
+            { repoCount: contextData.length },
+            'Finished converting GitHub repos to archive items'
+        );
+        // ========== END NEW CODE ==========
+
         logger.info({
             username: githubUsername,
             repoCount: repos.length,

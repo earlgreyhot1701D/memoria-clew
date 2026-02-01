@@ -36,7 +36,7 @@ export interface RecallMatch {
     title: string;
     summary: string;
     url?: string;
-    source: 'url' | 'manual' | 'hn';
+    source: 'url' | 'manual' | 'hn' | 'github' | 'extension';
     tags: string[];
     matchReason: string;
     relevanceScore: number;

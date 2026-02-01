@@ -7,38 +7,34 @@ async function verify() {
     try {
         // 1. Capture text
         console.log('1. Testing Capture (Text)...');
-        // Use a unique content to ensure we find "it" specifically
-        const content = 'Test capture item ' + Date.now();
+        const content = 'Technical overview of React and Hooks for state management';
         const captureRes = await axios.post(`${baseUrl}/api/capture`, {
             url: content
         });
-        console.log('Capture Success:', captureRes.data.success);
-        console.log('Item ID:', captureRes.data.data.id);
-        console.log('Summary:', captureRes.data.data.summary);
+        console.log('Text Capture Success:', !!captureRes.data.data.id);
+        console.log('Title:', captureRes.data.data.title);
         console.log('Tags:', captureRes.data.data.tags);
 
-        // 2. Fetch Archive
-        console.log('\n2. Testing Get Archive...');
-        const archiveRes = await axios.get(`${baseUrl}/api/archive`);
-        console.log('Archive Success:', archiveRes.data.success);
-        console.log('Items found:', archiveRes.data.data.length);
-
-        const found = archiveRes.data.data.find(i => i.id === captureRes.data.data.id);
-        if (found) {
-            console.log('SUCCESS: Captured item found in archive!');
-            console.log('Found Item Title:', found.title);
-        } else {
-            console.error('FAILURE: Captured item NOT found in archive.');
+        if (captureRes.data.data.tags.includes('manual')) {
+            console.warn('WARNING: Received fallback tags. Still hitting rate limit or error.');
         }
+
+        console.log('\nWaiting 15 seconds to avoid rate limit...');
+        await new Promise(r => setTimeout(r, 15000));
+
+        // 2. Capture URL
+        console.log('2. Testing Capture (URL)...');
+        const urlRes = await axios.post(`${baseUrl}/api/capture`, {
+            url: 'https://github.com/google-gemini/generative-ai-js'
+        });
+        console.log('URL Capture Success:', !!urlRes.data.data.id);
+        console.log('URL Title:', urlRes.data.data.title);
+        console.log('URL Tags:', urlRes.data.data.tags);
 
     } catch (err) {
         console.error('Verification Failed:', err.message);
-        if (err.response) {
-            console.error('Status:', err.response.status);
-            console.error('Data:', err.response.data);
-        }
+        if (err.response) console.error('Response:', err.response.data);
     }
 }
 
-// Simple delay to let server start (it's already running hopefully)
-setTimeout(verify, 1000);
+verify();

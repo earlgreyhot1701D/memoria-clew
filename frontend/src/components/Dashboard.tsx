@@ -38,6 +38,10 @@ export const Dashboard: React.FC = () => {
             if (res.ok) {
                 const json = await res.json();
                 setArchiveItems(json.data || []);
+                addLog({
+                    action: 'ARCHIVE_SYNC',
+                    details: `Retrieved ${json.data?.length || 0} items`
+                });
             }
         } catch (err) {
             console.error('Failed to fetch archive', err);
@@ -137,7 +141,14 @@ export const Dashboard: React.FC = () => {
     useEffect(() => {
         if (context && !recallLoading && matches.length === 0) {
             console.log('[Dashboard] Auto-triggering Intelligence Stream');
+            addLog({ action: 'RECALL_INIT', details: 'Auto-refreshing context...' });
             handleRecall();
+        } else if (matches.length > 0) {
+            // Log when matches update (optional, but good for visibility)
+            // Ideally we'd log this inside useRecall but that's a hook.
+            // We can check if we just finished loading?
+            // Simpler: useRecall could return a 'lastRun' timestamp or similar.
+            // For now, let's just log the init.
         }
     }, [context, recallLoading, matches.length, handleRecall]);
 

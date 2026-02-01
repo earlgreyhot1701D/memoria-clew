@@ -44,9 +44,10 @@ export function useRecall() {
 
             if (!response.ok) throw new Error('Recall failed');
 
-            const data = await response.json();
-            setMatches(data.matches || []);
-            setExplanation(data.explanation || '');
+            const responseData = await response.json();
+            const { matches: newMatches, explanation: newExplanation } = responseData.data || {};
+            setMatches(newMatches || []);
+            setExplanation(newExplanation || '');
         } catch (err) {
             // Don't update state if request was aborted
             if (err instanceof DOMException && err.name === 'AbortError') {

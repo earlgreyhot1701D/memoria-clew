@@ -172,9 +172,12 @@ app.post('/api/recall', async (req, res) => {
 
         res.json({
             success: true,
-            matches: result.matches,
-            explanation: result.explanation,
-            timestamp: result.timestamp
+            data: {
+                matches: result.matches,
+                explanation: result.explanation,
+                timestamp: result.timestamp
+            },
+            message: `Found ${result.matches.length} relevant items`
         });
     } catch (err: any) {
         logger.error({ error: err.message }, 'Recall failed');

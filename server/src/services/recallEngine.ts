@@ -3,6 +3,34 @@ import { ArchiveItem } from './captureService.js';
 
 const logger = pino();
 
+// Cache for archive items to avoid excessive Firestore reads
+const archiveCache = new Map<string, {
+    items: ArchiveItem[];
+    expiry: number;
+}>();
+
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function getArchiveWithCache(userId: string): Promise<ArchiveItem[]> {
+    const now = Date.now();
+    const cached = archiveCache.get(userId);
+
+    if (cached && cached.expiry > now) {
+        logger.debug({ userId }, 'Recall: Using cached archive');
+        return cached.items;
+    }
+
+    const { getArchive } = await import('./captureService.js');
+    const items = await getArchive(userId, 100);
+
+    archiveCache.set(userId, {
+        items,
+        expiry: now + CACHE_TTL
+    });
+
+    return items;
+}
+
 export interface RecallMatch {
     archiveItemId: string;
     title: string;
@@ -52,7 +80,7 @@ export function generateReason(
  * Match archive items against current context
  */
 export async function matchArchiveToContext(
-    userId: string,
+    userId: string, // TODO: Reserved for future user-specific filtering/ranking logic
     currentContextTags: string[],
     archiveItems: ArchiveItem[],
     query?: string,
@@ -176,15 +204,12 @@ export async function recallWithContext(
     timestamp: number;
 }> {
 
-    // Allow injecting fetcher for testing, else dynamic import to avoid circular dependency issues if any
+    // Allow injecting fetcher for testing, else use cached fetcher
     let items: ArchiveItem[] = [];
     if (archiveFetcher) {
         items = await archiveFetcher(userId);
     } else {
-        // Dynamic import to break circular dependency if Archive uses Recall or vice versa, 
-        // though strictly they shouldn't. safely importing here.
-        const { getArchive } = await import('./captureService.js');
-        items = await getArchive(userId, 100); // Fetch top 100 recent to scan
+        items = await getArchiveWithCache(userId);
     }
 
     logger.info({

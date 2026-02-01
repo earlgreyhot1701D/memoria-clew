@@ -53,25 +53,28 @@ async function fetchUrlContent(url: string): Promise<{ title: string; content: s
     }
 }
 
-async function summarizeWithGemini(content: string, isUrl: boolean): Promise<{ summary: string; tags: string[]; detectedTools: string[] }> {
+async function summarizeWithGemini(content: string, isUrl: boolean): Promise<{ summary: string; tags: string[]; detectedTools: string[]; title?: string }> {
     try {
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        // Updated to latest experimental model as requested
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 
         const prompt = `You are an expert technical analyst. Extract structured data from the content below.
 
 STRICT REQUIREMENTS:
-1. **software_tools**: List ALL software, libraries, frameworks, APIs, or specific tools mentioned.
+1. **title**: Generate a concise (3-6 words) descriptive title. This is REQUIRED.
+2. **software_tools**: List ALL software, libraries, frameworks, APIs, or specific tools mentioned.
    - Return clean names (e.g. "React" not "React.js", "PostgreSQL" not "Postgres").
    - If NONE are found, return [].
-2. **topics**: Extract 3-5 high-level CONCEPT tags only.
+3. **topics**: Extract 3-5 high-level CONCEPT tags only.
    - Do NOT repeat valid tools here. Use broad terms like "database", "devops", "frontend".
-3. **summary**: 1-2 sentence technical summary.
+4. **summary**: 1-2 sentence technical summary.
 
 Content:
 ${content}
 
 Example Output:
 {
+  "title": "React with Firebase Overview",
   "summary": "Overview of using React with Firebase.",
   "software_tools": ["React", "Firebase"],
   "topics": ["frontend", "backend-as-a-service"]
@@ -88,6 +91,7 @@ Respond STRICTLY in JSON.`;
         const parsed = JSON.parse(cleanText);
 
         return {
+            title: parsed.title, // Prioritized extraction
             summary: parsed.summary || 'No summary available.',
             tags: parsed.topics || [],
             detectedTools: parsed.software_tools || [],
@@ -128,16 +132,27 @@ export async function captureItem(userId: string, input: string): Promise<Archiv
     }
 
     // Summarize
-    let summaryData = { summary: content, tags: [] as string[], detectedTools: [] as string[] };
+    let summaryData: { summary: string; tags: string[]; detectedTools: string[]; title?: string } = {
+        summary: content,
+        tags: [],
+        detectedTools: [],
+        title: undefined
+    };
     try {
         await logEvent(userId, 'capture', 'success', `SENDING_TO_GEMINI: ${content.substring(0, 50)}...`);
         summaryData = await summarizeWithGemini(content, !!isUrl);
-        await logEvent(userId, 'capture', 'success', `SUMMARY_CREATED (model: gemini-2.5-flash)`);
+        await logEvent(userId, 'capture', 'success', `SUMMARY_CREATED (model: gemini-2.0-flash-exp)`);
         await logEvent(userId, 'capture', 'success', `TAGS_EXTRACTED: ${JSON.stringify(summaryData.tags)}`);
 
         if (summaryData.detectedTools && summaryData.detectedTools.length > 0) {
             await logEvent(userId, 'capture', 'success', `TOOLS_DETECTED: ${JSON.stringify(summaryData.detectedTools)}`);
         }
+
+        // Use generated title if manual capture and title exists
+        if (!isUrl && summaryData.title) {
+            title = summaryData.title;
+        }
+
     } catch (err) {
         // Fallback handled
     }

@@ -44,20 +44,45 @@ export async function recallEngine(input: RecallInput): Promise<RecallOutput> {
         });
 
         // Step 2: Rank by confidence (# of matching tags)
+        // Step 2: Rank by confidence (Weighted Scoring)
+        // Weights: Tag Match (60%), Recency (30%), Source (10%)
         const ranked = matched
             .map((item) => {
-                const matchingTags = (item.tags || []).filter((tag: string) =>
+                const itemTags = item.tags || [];
+                const matchingTags = itemTags.filter((tag: string) =>
                     [...currentContext, ...newItemTags].includes(tag)
                 );
-                const confidence = Math.min(matchingTags.length / currentContext.length, 1.0);
+
+                // 1. Tag Score (0.0 - 1.0)
+                // If item matches all context tags, score is 1. If 1/2, score 0.5.
+                // We normalize by the *input context size* to penalize "loose" matches? 
+                // No, Jaccard is better: Intersection / Union.
+                const uniqueItemTags = new Set(itemTags);
+                const uniqueContextTags = new Set([...currentContext, ...newItemTags]);
+                const union = new Set([...uniqueItemTags, ...uniqueContextTags]);
+                const jaccardScore = matchingTags.length / union.size;
+
+                // 2. Recency Score (0.0 - 1.0)
+                // Decay over 30 days. 
+                const daysAgo = (Date.now() - item.timestamp) / (1000 * 60 * 60 * 24);
+                const recencyScore = Math.max(0, 1 - (daysAgo / 30));
+
+                // 3. Source Score (0.0 - 1.0)
+                // Manual captures are high signal.
+                const sourceScore = item.source === 'manual' ? 1.0 : 0.5;
+
+                // Composite Score
+                const weightedScore = (jaccardScore * 0.6) + (recencyScore * 0.3) + (sourceScore * 0.1);
+
                 return {
                     ...item,
-                    confidence,
+                    confidence: weightedScore,
+                    rawScore: { jaccardScore, recencyScore, sourceScore }, // Debug
                     reason: `Matched ${matchingTags.length} tag(s): ${matchingTags.join(', ')}`,
                 };
             })
             .sort((a, b) => b.confidence - a.confidence)
-            .slice(0, 10); // Top 10
+            .slice(0, 5); // Top 5 strict
 
         // Step 3: Build reasoning
         const reasoning = matched.length > 0

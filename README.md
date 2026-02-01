@@ -39,8 +39,6 @@ No black-box magic. No hidden autonomy. Just useful recall at the right moment.
 
 A local-first, memory-augmented research assistant.
 
-## Overview
-
 Memoria Clew is designed to help you capture, recall, and synthesize information for your projects.
 
 ![How It Works](./assets/howitworks.png)

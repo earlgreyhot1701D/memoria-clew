@@ -123,11 +123,13 @@ export const Dashboard: React.FC = () => {
 
     // Trigger recall when context changes or manually (here manual as per req)
     const handleRecall = () => {
+        console.log('[Dashboard] handleRecall triggered');
         // Derive tags from context + selected tag
         // context.repos[].tags
         const contextTags = context?.repos?.flatMap(r => r.tags) || [];
         const activeTags = [...new Set([...(selectedTag ? [selectedTag] : []), ...contextTags])];
 
+        console.log('[Dashboard] Recalling with tags:', activeTags);
         recall(activeTags, "Active dashboard session");
     };
 
@@ -236,6 +238,12 @@ export const Dashboard: React.FC = () => {
                         {explanation && (
                             <div className="mono" style={{ fontSize: '10px', marginTop: '10px', color: '#0056b3', padding: '5px' }}>
                                 {explanation}
+                            </div>
+                        )}
+
+                        {!recallLoading && explanation && matches.length === 0 && (
+                            <div className="mono" style={{ fontSize: '12px', marginTop: '10px', color: '#666', padding: '10px', textAlign: 'center' }}>
+                                (No matches found for current context)
                             </div>
                         )}
 

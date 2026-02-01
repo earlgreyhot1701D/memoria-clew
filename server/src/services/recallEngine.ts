@@ -1,115 +1,184 @@
 import { pino } from 'pino';
-import { db } from './firestoreService.js';
+import { ArchiveItem } from './captureService.js';
 
 const logger = pino();
 
-export interface RecallInput {
-    currentContext: string[];     // Tags from current project context
-    archiveItems: any[];          // Items to search against
-    newItemTags?: string[];       // Optional: tags of new item being captured
-}
-
-export interface RecallOutput {
-    matched_items: Array<{
-        id: string;
-        title: string;
-        source: string;
-        tags: string[];
-        confidence: number;
-        reason: string;
-    }>;
-    reasoning: string;
-    total_matches: number;
+export interface RecallMatch {
+    archiveItemId: string;
+    title: string;
+    summary: string;
+    url?: string;
+    source: 'url' | 'manual' | 'hn';
+    tags: string[];
+    matchReason: string;
+    relevanceScore: number;
+    sourceUrl?: string; // Original URL if source is 'url'
 }
 
 /**
- * Core recall algorithm - used by both REST and MCP
+ * Generate human-readable reasoning for why an item matched
  */
-export async function recallEngine(input: RecallInput): Promise<RecallOutput> {
-    logger.info({
-        context: input.currentContext,
-        archiveSize: input.archiveItems?.length || 0
-    }, 'Recall engine invoked');
+export function generateReason(
+    contextTags: string[],
+    archiveItem: ArchiveItem,
+    matchType: 'tag' | 'keyword' | 'tool' | 'hybrid',
+    details?: string
+): string {
+    const itemTags = archiveItem.tags || [];
 
-    const { currentContext = [], archiveItems = [], newItemTags = [] } = input;
-
-    try {
-        // Step 1: Find tag intersections
-        const matched = archiveItems.filter((item) => {
-            const itemTags = item.tags || [];
-            const hasTagMatch = itemTags.some((tag: string) =>
-                [...currentContext, ...newItemTags].includes(tag)
-            );
-            return hasTagMatch;
-        });
-
-        // Step 2: Rank by confidence (# of matching tags)
-        // Step 2: Rank by confidence (Weighted Scoring)
-        // Weights: Tag Match (60%), Recency (30%), Source (10%)
-        const ranked = matched
-            .map((item) => {
-                const itemTags = item.tags || [];
-                const matchingTags = itemTags.filter((tag: string) =>
-                    [...currentContext, ...newItemTags].includes(tag)
-                );
-
-                // 1. Tag Score (0.0 - 1.0)
-                // If item matches all context tags, score is 1. If 1/2, score 0.5.
-                // We normalize by the *input context size* to penalize "loose" matches? 
-                // No, Jaccard is better: Intersection / Union.
-                const uniqueItemTags = new Set(itemTags);
-                const uniqueContextTags = new Set([...currentContext, ...newItemTags]);
-                const union = new Set([...uniqueItemTags, ...uniqueContextTags]);
-                const jaccardScore = matchingTags.length / union.size;
-
-                // 2. Recency Score (0.0 - 1.0)
-                // Decay over 30 days. 
-                const daysAgo = (Date.now() - item.timestamp) / (1000 * 60 * 60 * 24);
-                const recencyScore = Math.max(0, 1 - (daysAgo / 30));
-
-                // 3. Source Score (0.0 - 1.0)
-                // Manual captures are high signal.
-                const sourceScore = item.source === 'manual' ? 1.0 : 0.5;
-
-                // Composite Score
-                const weightedScore = (jaccardScore * 0.6) + (recencyScore * 0.3) + (sourceScore * 0.1);
-
-                return {
-                    ...item,
-                    confidence: weightedScore,
-                    rawScore: { jaccardScore, recencyScore, sourceScore }, // Debug
-                    reason: `Matched ${matchingTags.length} tag(s): ${matchingTags.join(', ')}`,
-                };
-            })
-            .sort((a, b) => b.confidence - a.confidence)
-            .slice(0, 5); // Top 5 strict
-
-        // Step 3: Build reasoning
-        const reasoning = matched.length > 0
-            ? `Found ${matched.length} items matching context: ${currentContext.join(', ')}`
-            : 'No matching items in archive';
-
-        logger.info({
-            input_context: currentContext,
-            total_matches: matched.length,
-            top_results: ranked.length,
-            reasoning,
-        }, 'Recall engine complete');
-
-        return {
-            matched_items: ranked.map((item) => ({
-                id: item.id || '',
-                title: item.title || 'Untitled',
-                source: item.source || 'unknown',
-                tags: item.tags || [],
-                confidence: item.confidence,
-                reason: item.reason,
-            })),
-            reasoning,
-            total_matches: matched.length,
-        };
-    } catch (err: any) {
-        logger.error({ error: err.message }, 'Recall engine failed');
-        throw err;
+    switch (matchType) {
+        case 'tag':
+            const matchingTags = itemTags.filter(t => contextTags.includes(t));
+            return `Matches ${matchingTags.length} tags: ${matchingTags.slice(0, 3).join(', ').toUpperCase()}`;
+        case 'keyword':
+            return `Contains keyword '${details}' in summary`;
+        case 'tool':
+            return `References detected tool: ${details}`;
+        case 'hybrid':
+        default:
+            const matches = itemTags.filter(t => contextTags.includes(t));
+            return matches.length > 0
+                ? `Matches tags: ${matches.join(', ')}`
+                : 'Relevance inferred from context overlap';
     }
 }
+
+/**
+ * Match archive items against current context
+ */
+export async function matchArchiveToContext(
+    userId: string,
+    currentContextTags: string[],
+    archiveItems: ArchiveItem[],
+    query?: string,
+    currentProjectDescription?: string
+): Promise<RecallMatch[]> {
+    const matches: RecallMatch[] = [];
+    const lowerContextTags = currentContextTags.map(t => t.toLowerCase());
+    const lowerQuery = query?.toLowerCase() || '';
+    const lowerDesc = currentProjectDescription?.toLowerCase() || '';
+
+    for (const item of archiveItems) {
+        let score = 0;
+        let reasons: string[] = [];
+        let matchType: 'tag' | 'keyword' | 'tool' | 'hybrid' = 'hybrid';
+
+        const itemTags = (item.tags || []).map(t => t.toLowerCase());
+        const itemTools = (item.detectedTools || []).map(t => t.toLowerCase());
+        const itemContent = ((item.summary || '') + (item.title || '')).toLowerCase();
+
+        // 1. Tag Overlap (High Weight)
+        const intersectingTags = itemTags.filter(tag => lowerContextTags.includes(tag));
+        if (intersectingTags.length > 0) {
+            // Jaccard-ish score: intersection / union
+            const union = new Set([...itemTags, ...lowerContextTags]).size;
+            score += (intersectingTags.length / union) * 0.6; // 60% weight
+            reasons.push(`Tags: ${intersectingTags.slice(0, 2).join(', ')}`);
+            matchType = 'tag';
+        }
+
+        // 2. Query/Keyword Match (Medium Weight)
+        if (lowerQuery && itemContent.includes(lowerQuery)) {
+            score += 0.3;
+            reasons.push(`Query match: "${query}"`);
+            matchType = 'keyword';
+        }
+
+        // 3. Description Keyword Match (Low Weight)
+        // Simple check if description words appear in item
+        if (lowerDesc) {
+            const descWords = lowerDesc.split(' ').filter(w => w.length > 4); // Filter small words
+            const foundWords = descWords.filter(w => itemContent.includes(w));
+            if (foundWords.length > 0) {
+                score += 0.1 * Math.min(foundWords.length, 3); // Max 0.3 bonus
+                matchType = 'hybrid';
+            }
+        }
+
+        // 4. Tool Match (High Signal)
+        // If context tags are tools that appear in detectedTools
+        const toolMatches = itemTools.filter(t => lowerContextTags.includes(t));
+        if (toolMatches.length > 0) {
+            score += 0.2;
+            reasons.push(`Tool: ${toolMatches[0]}`);
+            matchType = 'tool';
+        }
+
+        // 5. Recency Boost
+        const daysAgo = (Date.now() - item.timestamp) / (1000 * 60 * 60 * 24);
+        if (daysAgo < 7) {
+            score += 0.1; // Recent boost
+        }
+
+        if (score > 0.1) { // Threshold
+            matches.push({
+                archiveItemId: item.id,
+                title: item.title,
+                summary: item.summary,
+                url: item.url, // Original source URL
+                source: item.source,
+                tags: item.tags || [],
+                matchReason: generateReason(currentContextTags, item, matchType, reasons.join(', ')),
+                relevanceScore: Math.min(score, 1.0),
+                sourceUrl: item.url
+            });
+        }
+    }
+
+    return matches.sort((a, b) => b.relevanceScore - a.relevanceScore).slice(0, 10);
+}
+
+/**
+ * Main Entry Point: Recall with Context
+ */
+export async function recallWithContext(
+    userId: string,
+    currentProjectTags: string[],
+    currentProjectDescription?: string,
+    query?: string,
+    archiveFetcher?: (userId: string) => Promise<ArchiveItem[]>
+): Promise<{
+    matches: RecallMatch[];
+    explanation: string;
+    timestamp: number;
+}> {
+
+    // Allow injecting fetcher for testing, else dynamic import to avoid circular dependency issues if any
+    let items: ArchiveItem[] = [];
+    if (archiveFetcher) {
+        items = await archiveFetcher(userId);
+    } else {
+        // Dynamic import to break circular dependency if Archive uses Recall or vice versa, 
+        // though strictly they shouldn't. safely importing here.
+        const { getArchive } = await import('./captureService.js');
+        items = await getArchive(userId, 100); // Fetch top 100 recent to scan
+    }
+
+    logger.info({
+        tags: currentProjectTags,
+        query,
+        archiveCount: items.length
+    }, 'Recall with Context started');
+
+    const matches = await matchArchiveToContext(
+        userId,
+        currentProjectTags,
+        items,
+        query,
+        currentProjectDescription
+    );
+
+    const explanation = matches.length > 0
+        ? `Found ${matches.length} relevant items based on ${currentProjectTags.join(', ')} ${query ? `and query "${query}"` : ''}.`
+        : 'No relevant items found in archive for this context.';
+
+    return {
+        matches,
+        explanation,
+        timestamp: Date.now()
+    };
+}
+
+// Re-export old interface if needed for backwards compat, or remove if fully migrating
+// For now, keeping the file clean.
+

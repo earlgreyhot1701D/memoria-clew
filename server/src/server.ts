@@ -3,7 +3,7 @@ import express from 'express';
 import { createHTTPServer } from '@leanmcp/core';
 import { setupSecurityMiddleware } from './middleware/securityMiddleware.js';
 import { memoriaRecallTool } from './tools/memoriaRecall.js';
-import { recallEngine } from './services/recallEngine.js';
+// import { recallEngine } from './services/recallEngine.js'; // Removed in Phase 4
 import { pino } from 'pino';
 import { seedGitHubContext, getGitHubContext } from './services/githubService.js';
 import { checkRateLimit } from './services/rateLimitService.js';
@@ -143,10 +143,22 @@ app.post('/api/recall', async (req, res) => {
             });
         }
 
-        const result = await recallEngine(req.body);
+        const { userId = 'current-user', tags = [], description = '', query = '' } = req.body;
+
+        // Use dynamic import or updated import if valid
+        const { recallWithContext } = await import('./services/recallEngine.js');
+        const result = await recallWithContext(userId, tags, description, query);
+
+        // Log recall event
+        if (result.matches.length > 0) {
+            logger.info({ matchCount: result.matches.length }, 'Recall successful');
+        }
+
         res.json({
             success: true,
-            data: result,
+            matches: result.matches,
+            explanation: result.explanation,
+            timestamp: result.timestamp
         });
     } catch (err: any) {
         logger.error({ error: err.message }, 'Recall failed');

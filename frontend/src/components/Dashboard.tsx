@@ -11,16 +11,17 @@ import { ArchiveFilter } from './ArchiveFilter';
 import { SystemLog } from './SystemLog';
 import { ErrorBanner } from './ErrorBanner';
 import { OnboardingTooltip } from './OnboardingTooltip';
+import { useRecall } from '../hooks/useRecall';
 import { useArchiveSearch } from '../hooks/useArchiveSearch';
 import '../styles/dashboard.css';
 import '../styles/recall-card.css';
 
 export const Dashboard: React.FC = () => {
     const { user, loading: authLoading, login } = useAuth();
+    const { matches, explanation, loading: recallLoading, recall } = useRecall();
 
     // Switch to Local State + API for reliability (bypassing Firestore Rule issues)
     const [archiveItems, setArchiveItems] = useState<any[]>([]);
-    const [recallCards, setRecallCards] = useState<any[]>([]); // Placeholder for API integration
     const [logs, setLogs] = useState<any[]>([]); // Local session logs
 
     const { context, syncContext, loading } = useGitHubContext();
@@ -120,6 +121,16 @@ export const Dashboard: React.FC = () => {
         }
     };
 
+    // Trigger recall when context changes or manually (here manual as per req)
+    const handleRecall = () => {
+        // Derive tags from context + selected tag
+        // context.repos[].tags
+        const contextTags = context?.repos?.flatMap(r => r.tags) || [];
+        const activeTags = [...new Set([...(selectedTag ? [selectedTag] : []), ...contextTags])];
+
+        recall(activeTags, "Active dashboard session");
+    };
+
     if (authLoading) {
         return <div className="mono">LOADING...</div>;
     }
@@ -209,14 +220,45 @@ export const Dashboard: React.FC = () => {
                 </aside>
 
                 <main id="main-content" aria-label="Main content">
-                    {recallCards?.length > 0 && (
-                        <RecallCard
-                            item={recallCards[0]}
-                            onUseful={() => console.log('Useful')}
-                            onNotRelevant={() => console.log('Not relevant')}
-                            onDismiss={() => console.log('Dismissed')}
-                        />
-                    )}
+                    {/* SMART RECALL SECTION */}
+                    <section className="card" style={{ marginTop: '20px' }}>
+                        <h2 className="mono">SMART_RECALL</h2>
+
+                        <button
+                            onClick={handleRecall}
+                            disabled={recallLoading}
+                            className="btn-black mono"
+                            style={{ width: '100%', marginBottom: '10px' }}
+                        >
+                            {recallLoading ? 'RECALLING...' : 'TRIGGER RECALL'}
+                        </button>
+
+                        {explanation && (
+                            <div className="mono" style={{ fontSize: '10px', marginTop: '10px', color: '#0056b3', padding: '5px' }}>
+                                {explanation}
+                            </div>
+                        )}
+
+                        {matches.length > 0 && (
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                                gap: '12px',
+                                marginTop: '15px'
+                            }}>
+                                {matches.map((match) => (
+                                    <RecallCard
+                                        key={match.archiveItemId}
+                                        match={match}
+                                        onArchiveClick={(id) => {
+                                            // Navigate to or highlight archive item
+                                            console.log('Navigate to archive item', id);
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </section>
                 </main>
 
                 <SystemLog entries={logs || []} />

@@ -1,52 +1,85 @@
 import React from 'react';
-import { RecallCard as RecallCardType } from '../types/memoria';
+import { RecallMatch } from '../hooks/useRecall';
 
 interface RecallCardProps {
-    item: RecallCardType;
-    onUseful: (id: string) => void;
-    onNotRelevant: (id: string) => void;
-    onDismiss: (id: string) => void;
+    match: RecallMatch;
+    onArchiveClick?: (id: string) => void;
 }
 
-export const RecallCard: React.FC<RecallCardProps> = ({
-    item,
-    onUseful,
-    onNotRelevant,
-    onDismiss,
-}) => (
-    <section className="recall-card" aria-label="Recalled item from memory">
-        <div className="mono" style={{ fontSize: '10px', color: '#ff0033' }}>
-            RECALLED_FROM_MEMORIA // {item.daysAgo} DAYS AGO
+export const RecallCard: React.FC<RecallCardProps> = ({ match, onArchiveClick }) => (
+    <article
+        className="card recall-card"
+        style={{
+            border: '1px solid #0056b3',
+            background: '#f0f7ff',
+            padding: '10px'
+        }}
+    >
+        <div style={{ fontSize: '9px', color: '#0056b3', marginBottom: '6px', fontWeight: 'bold' }}>
+            [RECALL MATCH - {(match.relevanceScore * 100).toFixed(0)}%]
         </div>
-        <h3 className="mono" style={{ margin: '10px 0', fontSize: '16px' }}>
-            {item.title}
+
+        <h3 className="mono" style={{
+            fontSize: '12px',
+            marginBottom: '6px'
+        }}>
+            {match.url ? (
+                <a
+                    href={match.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#0056b3', textDecoration: 'none' }}
+                >
+                    {match.title.toUpperCase()} ↗
+                </a>
+            ) : (
+                match.title.toUpperCase()
+            )}
         </h3>
-        <p style={{ fontSize: '13px', color: '#333' }}>
-            This matches technologies detected in your projects (<b>{item.matchedTag}</b>).
-        </p>
-        <div className="tag match-alert mono">CONTEXT_MATCH: {item.matchedTag.toUpperCase()}</div>
-        <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-            <button
-                className="btn-minimal mono"
-                onClick={() => onUseful(item.id)}
-            >
-                USEFUL
-            </button>
-            <button
-                className="btn-minimal mono"
-                onClick={() => onNotRelevant(item.id)}
-            >
-                NOT_RELEVANT
-            </button>
-            <button
-                className="btn-minimal mono"
-                onClick={() => onDismiss(item.id)}
-            >
-                DISMISS
-            </button>
+
+        <div style={{ fontSize: '10px', color: '#0056b3', marginBottom: '4px' }}>
+            WHY: {match.matchReason}
         </div>
-        <p className="mono" style={{ fontSize: '10px', color: '#555', marginTop: '10px' }}>
-            CONFIDENCE: {(item.confidence * 100).toFixed(0)}%
+
+        <p style={{
+            fontSize: '10px',
+            color: '#333',
+            marginBottom: '8px'
+        }}>
+            {match.summary}
         </p>
-    </section>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+            {match.tags?.map((tag) => (
+                <span
+                    key={tag}
+                    style={{
+                        padding: '1px 4px',
+                        background: '#e6f2ff',
+                        color: '#0056b3',
+                        fontSize: '8px',
+                        border: '1px solid #b8daff',
+                        borderRadius: '2px'
+                    }}
+                >
+                    {tag}
+                </span>
+            ))}
+        </div>
+
+        <button
+            onClick={() => onArchiveClick?.(match.archiveItemId)}
+            style={{
+                marginTop: '8px',
+                padding: '3px 6px',
+                fontSize: '8px',
+                background: '#0056b3',
+                color: 'white',
+                border: '1px solid #0056b3',
+                cursor: 'pointer'
+            }}
+        >
+            VIEW IN ARCHIVE
+        </button>
+    </article>
 );

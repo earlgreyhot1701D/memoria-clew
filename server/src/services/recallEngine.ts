@@ -193,11 +193,18 @@ export async function recallWithContext(
         archiveCount: items.length
     }, 'Recall with Context started');
 
+    // Sanitize and validate query
+    const safeQuery = query?.trim();
+    if (safeQuery && safeQuery.length > 100) {
+        logger.warn({ queryLength: safeQuery.length }, 'Query too long, trimming');
+    }
+    const finalQuery = safeQuery?.substring(0, 100);
+
     const matches = await matchArchiveToContext(
         userId,
         currentProjectTags,
         items,
-        query,
+        finalQuery,
         currentProjectDescription
     );
 

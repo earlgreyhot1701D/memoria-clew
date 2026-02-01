@@ -126,7 +126,7 @@ export const Dashboard: React.FC = () => {
         console.log('[Dashboard] handleRecall triggered');
         // Derive tags from context + selected tag
         // context.repos[].tags
-        const contextTags = context?.repos?.flatMap(r => r.tags) || [];
+        const contextTags = context?.repos?.flatMap((r: any) => r.tags) || [];
         const activeTags = [...new Set([...(selectedTag ? [selectedTag] : []), ...contextTags])];
 
         console.log('[Dashboard] Recalling with tags:', activeTags);
@@ -139,7 +139,7 @@ export const Dashboard: React.FC = () => {
             console.log('[Dashboard] Auto-triggering Intelligence Stream');
             handleRecall();
         }
-    }, [context]);
+    }, [context, recallLoading, matches.length, handleRecall]);
 
     if (authLoading) {
         return <div className="mono">LOADING...</div>;

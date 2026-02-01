@@ -1,16 +1,18 @@
 import { Tool } from '@leanmcp/core';
 import { recallWithContext } from '../services/recallEngine.js';
 
+interface MemoriaRecallParams {
+    userId: string;
+    projectTags: string[];
+    projectDescription?: string;
+    query?: string;
+}
+
 export class MemoriaRecallService {
     @Tool({
         description: 'Surface relevant research from Memoria Clew archive based on current project context'
     })
-    async memoria_recall(params: {
-        userId: string;
-        projectTags: string[];
-        projectDescription?: string;
-        query?: string;
-    }) {
+    async memoria_recall(params: MemoriaRecallParams) {
         return recallHandler(params);
     }
 }

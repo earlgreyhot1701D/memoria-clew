@@ -31,7 +31,8 @@ app.post('/api/capture', async (req, res) => {
             return res.status(400).json({ error: 'Content required' });
         }
 
-        const rateLimit = await checkRateLimit('capture', 'user');
+        const userId = req.ip || 'anonymous';
+        const rateLimit = await checkRateLimit('capture', userId);
         if (!rateLimit.allowed) {
             return res.status(429).json({
                 error: 'Rate limit exceeded',
@@ -40,7 +41,7 @@ app.post('/api/capture', async (req, res) => {
         }
 
         // Hardcoded user for MVP - implementing full auth middleware later
-        const userId = 'current-user';
+        // const userId = 'current-user'; // Removed to use ip-based userId defined above
         const archiveItem = await captureItem(userId, url);
 
         res.json({
@@ -135,7 +136,8 @@ app.get('/api/context', async (req, res) => {
 
 app.post('/api/recall', async (req, res) => {
     try {
-        const rateLimit = await checkRateLimit('recall', 'user');
+        const clientIp = req.ip || 'anonymous';
+        const rateLimit = await checkRateLimit('recall', clientIp);
         if (!rateLimit.allowed) {
             return res.status(429).json({
                 error: 'Rate limit exceeded',
@@ -160,10 +162,13 @@ app.post('/api/recall', async (req, res) => {
         const { recallWithContext } = await import('./services/recallEngine.js');
         const result = await recallWithContext(userId, tags, description, query);
 
-        // Log recall event
-        if (result.matches.length > 0) {
-            logger.info({ matchCount: result.matches.length }, 'Recall successful');
-        }
+        // Log all recall events
+        logger.info({
+            matchCount: result.matches.length,
+            userId: userId,
+            tags: tags,
+            hasMatches: result.matches.length > 0
+        }, 'Recall request processed');
 
         res.json({
             success: true,

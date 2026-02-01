@@ -20,7 +20,7 @@ export class MemoriaRecallService {
 /**
  * Shared handler logic, also used for testing and direct API access if needed.
  */
-export const recallHandler = async (params: any) => {
+export const recallHandler = async (params: MemoriaRecallParams) => {
     const result = await recallWithContext(
         params.userId,
         params.projectTags,

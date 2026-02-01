@@ -2,41 +2,39 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { RecallCard } from '../../components/RecallCard';
 
-const mockItem = {
-    id: '1',
+const mockMatch = {
+    archiveItemId: '1',
     title: 'Test Context',
-    matchedTag: 'react',
-    reason: 'Matched tag',
-    confidence: 0.95,
-    daysAgo: 2,
+    relevanceScore: 0.95,
+    matchReason: 'Matched tag',
+    summary: 'Test summary',
+    tags: ['react'],
+    url: 'http://example.com',
+    source: 'manual' as const
 };
 
 describe('RecallCard', () => {
     it('renders title and match info', () => {
         render(
             <RecallCard
-                item={mockItem}
-                onUseful={() => { }}
-                onNotRelevant={() => { }}
-                onDismiss={() => { }}
+                match={mockMatch}
+                onArchiveClick={() => { }}
             />
         );
-        expect(screen.getByText('Test Context')).toBeInTheDocument();
-        expect(screen.getByText('CONTEXT_MATCH: REACT')).toBeInTheDocument();
+        expect(screen.getByText('TEST CONTEXT')).toBeInTheDocument();
+        expect(screen.getByText(/RECALL MATCH - 95%/)).toBeInTheDocument();
     });
 
     it('handles interactions', () => {
-        const onUseful = vi.fn();
+        const onArchiveClick = vi.fn();
         render(
             <RecallCard
-                item={mockItem}
-                onUseful={onUseful}
-                onNotRelevant={() => { }}
-                onDismiss={() => { }}
+                match={mockMatch}
+                onArchiveClick={onArchiveClick}
             />
         );
 
-        fireEvent.click(screen.getByText('USEFUL'));
-        expect(onUseful).toHaveBeenCalledWith('1');
+        fireEvent.click(screen.getByText('VIEW IN ARCHIVE'));
+        expect(onArchiveClick).toHaveBeenCalledWith('1');
     });
 });

@@ -15,19 +15,22 @@ import { useRecall } from '../hooks/useRecall';
 import { useArchiveSearch } from '../hooks/useArchiveSearch';
 import '../styles/dashboard.css';
 import '../styles/recall-card.css';
+import { ArchiveItem, LogEntry } from '../types/memoria';
+
+
 
 export const Dashboard: React.FC = () => {
     const { user, loading: authLoading, login } = useAuth();
     const { matches, explanation, loading: recallLoading, recall } = useRecall();
 
     // Switch to Local State + API for reliability (bypassing Firestore Rule issues)
-    const [archiveItems, setArchiveItems] = useState<any[]>([]);
-    const [logs, setLogs] = useState<any[]>([]); // Local session logs
+    const [archiveItems, setArchiveItems] = useState<ArchiveItem[]>([]);
+    const [logs, setLogs] = useState<LogEntry[]>([]); // Local session logs
 
     const { context, syncContext, loading } = useGitHubContext();
 
     // Helper to add logs locally
-    const addLog = (entry: any) => {
+    const addLog = (entry: Omit<LogEntry, 'timestamp'>) => {
         setLogs(prev => [{ ...entry, timestamp: new Date().toISOString() }, ...prev]);
     };
 

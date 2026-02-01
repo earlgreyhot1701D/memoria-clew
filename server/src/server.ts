@@ -137,15 +137,18 @@ app.get('/api/context', async (req, res) => {
 app.post('/api/recall', async (req, res) => {
     try {
         const clientIp = req.ip || 'anonymous';
-        const rateLimit = await checkRateLimit('recall', clientIp);
-        if (!rateLimit.allowed) {
-            return res.status(429).json({
-                error: 'Rate limit exceeded',
-                resetSeconds: rateLimit.resetSeconds,
-            });
+        // Skip rate limit for localhost to improve dev experience (fix "Refresh" latency)
+        if (clientIp !== '::1' && clientIp !== '127.0.0.1') {
+            const rateLimit = await checkRateLimit('recall', clientIp);
+            if (!rateLimit.allowed) {
+                return res.status(429).json({
+                    error: 'Rate limit exceeded',
+                    resetSeconds: rateLimit.resetSeconds,
+                });
+            }
         }
 
-        const { userId = 'current-user', tags = [], description = '', query = '' } = req.body;
+        const { userId = req.ip || 'anonymous', tags = [], description = '', query = '' } = req.body;
 
         // Validation for Stage 4 High Priority Bug Fix
         if (tags && !Array.isArray(tags)) {

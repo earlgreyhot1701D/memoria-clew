@@ -77,17 +77,15 @@ body {
 
 /* Status Bar */
 .status-bar {
-  position: absolute;
-  top: 15px;
-  right: 40px;
   font-size: 10px;
-  background: #fff;
-  padding: 6px 10px;
-  border: 1px solid #000;
+  background: transparent;
+  padding: 4px 0;
+  border: none;
   z-index: 10;
-  max-width: 520px;
+  max-width: 100%;
   text-align: right;
   line-height: 1.4;
+  margin-top: 5px;
 }
 
 /* Sync & Capture Bar */
@@ -142,6 +140,7 @@ body {
   align-items: center;
   border-style: dashed;
   background: #fff;
+  width: 100%;
 }
 
 .capture-input {

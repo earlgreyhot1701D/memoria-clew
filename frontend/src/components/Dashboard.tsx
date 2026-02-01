@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { useFirestore } from '../hooks/useFirestore';
+
 import { useGitHubContext } from '../hooks/useGitHubContext';
 import { Header } from './Header';
 import { StatusBar } from './StatusBar';
@@ -174,7 +174,7 @@ export const Dashboard: React.FC = () => {
                 Skip to main content
             </a>
 
-            <StatusBar contextsSeeded={true} modelVersion="gemini-2.5-flash" promptVersion="v0.3" />
+
 
             <div className="dashboard-grid">
                 <section className="top-tools" aria-label="Primary actions">
@@ -191,7 +191,10 @@ export const Dashboard: React.FC = () => {
                         </div>
                     </div>
 
-                    <CaptureBar onCapture={handleCapture} />
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                        <CaptureBar onCapture={handleCapture} />
+                        <StatusBar contextsSeeded={true} modelVersion="gemini-2.5-flash" promptVersion="v0.3" />
+                    </div>
                 </section>
 
                 {error && (

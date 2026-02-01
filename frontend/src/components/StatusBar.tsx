@@ -13,6 +13,6 @@ export const StatusBar: React.FC<StatusBarProps> = ({
 }) => (
     <div className="status-bar mono" aria-label="Application status">
         MEMORIA: {contextsSeeded ? 'READY' : 'LOADING'} // CONTEXT: SEEDED<br />
-        SCAN: MANUAL (HN RSS) // MODEL: {modelVersion} // PROMPT: {promptVersion}
+        SCAN: MANUAL // MODEL: {modelVersion} // PROMPT: {promptVersion}
     </div>
 );

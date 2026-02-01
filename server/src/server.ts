@@ -60,7 +60,7 @@ app.post('/api/capture', async (req, res) => {
 
 app.get('/api/archive', async (req, res) => {
     try {
-        const userId = 'current-user';
+        const userId = req.ip || 'anonymous';
         const items = await getArchive(userId);
 
         res.json({

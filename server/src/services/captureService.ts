@@ -23,15 +23,26 @@ export interface ArchiveItem {
 }
 
 export async function getArchive(userId?: string, limit?: number): Promise<ArchiveItem[]> {
-    let query: FirebaseFirestore.Query = db.collection('archive').orderBy('timestamp', 'desc');
+    let query: FirebaseFirestore.Query = db.collection('archive');
     if (userId) {
         query = query.where('userId', '==', userId);
     }
-    if (limit) {
-        query = query.limit(limit);
-    }
+
+    // If limit is requested, we might get arbitrary recent items if we don't sort.
+    // However, sorting requires index. For now, fetch all and sort in memory if dataset is small.
+    // Or just fetch and let client sort.
+    // A safe approach without index is fetching latest 100 via logic if possible, but without index we can't sort by timestamp efficiently on server side for large datasets.
+    // For MVP/Demo: Fetch all (or reasonable limit) and sort in JS.
+
+    // query = query.limit(limit || 100); // Can't limit effectively without sort order
+
     const snapshot = await query.get();
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ArchiveItem));
+    const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ArchiveItem));
+
+    // Sort in memory (descending timestamp)
+    items.sort((a, b) => b.timestamp - a.timestamp);
+
+    return limit ? items.slice(0, limit) : items;
 }
 
 // Fetch content from URL using axios + cheerio

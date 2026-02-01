@@ -30,10 +30,10 @@ export const RecallCard: React.FC<RecallCardProps> = ({ match, onArchiveClick })
                     rel="noopener noreferrer"
                     style={{ color: '#0056b3', textDecoration: 'none' }}
                 >
-                    {match.title.toUpperCase()} ↗
+                    {(match.title || 'UNTITLED').toUpperCase()} ↗
                 </a>
             ) : (
-                match.title.toUpperCase()
+                (match.title || 'UNTITLED').toUpperCase()
             )}
         </h3>
 

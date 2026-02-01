@@ -145,6 +145,17 @@ app.post('/api/recall', async (req, res) => {
 
         const { userId = 'current-user', tags = [], description = '', query = '' } = req.body;
 
+        // Validation for Stage 4 High Priority Bug Fix
+        if (tags && !Array.isArray(tags)) {
+            return res.status(400).json({ error: 'tags must be an array' });
+        }
+        if (description && typeof description !== 'string') {
+            return res.status(400).json({ error: 'description must be a string' });
+        }
+        if (query && typeof query !== 'string') {
+            return res.status(400).json({ error: 'query must be a string' });
+        }
+
         // Use dynamic import or updated import if valid
         const { recallWithContext } = await import('./services/recallEngine.js');
         const result = await recallWithContext(userId, tags, description, query);

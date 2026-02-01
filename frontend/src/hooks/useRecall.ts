@@ -5,9 +5,11 @@ export interface RecallMatch {
     title: string;
     summary: string;
     url?: string;
+    source: 'url' | 'manual' | 'hn';
+    tags: string[];
     matchReason: string;
     relevanceScore: number;
-    tags: string[];
+    sourceUrl?: string; // Original URL if valid
 }
 
 export function useRecall() {
@@ -53,6 +55,7 @@ export function useRecall() {
         clearRecall: () => {
             setMatches([]);
             setExplanation('');
+            setError(null); // Fix: Reset error state
         }
     };
 }

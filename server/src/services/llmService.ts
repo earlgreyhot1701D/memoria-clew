@@ -33,23 +33,24 @@ export async function summarizeContent(content: string, isUrl: boolean): Promise
 async function summarizeWithClaude(content: string, isUrl: boolean): Promise<SummaryResult> {
     try {
         const apiKey = process.env.ANTHROPIC_API_KEY;
-        const prompt = `You are an expert technical analyst. Extract structured data from the content below.
+        const prompt = `Extract from this content ONLY what is explicitly mentioned.
 
-STRICT REQUIREMENTS:
-1. **title**: Generate a concise (3-6 words) descriptive title. This is REQUIRED.
-2. **software_tools**: List ALL software tools, libraries, or frameworks mentioned. Return [].
-3. **topics**: Extract 3-5 high-level CONCEPT tags only.
-4. **summary**: 1-2 sentence technical summary.
+RULES:
+- Extract topics/skills MENTIONED IN THE TEXT
+- Extract software tools FOUND IN THE TEXT  
+- Do NOT infer or guess
+- Do NOT hallucinate
+- If not clearly in the text, do not include
 
 Content:
 ${content.slice(0, 10000)}
 
 Respond STRICTLY in JSON matching this structure:
 {
-  "title": "...",
-  "summary": "...",
-  "software_tools": [],
-  "topics": []
+  "title": "extracted title or 'No title found'",
+  "summary": "2-3 sentence technical summary",
+  "software_tools": ["only", "tools", "mentioned", "in", "text"],
+  "topics": ["only", "topics", "explicitly", "mentioned"]
 }`;
 
         const response = await axios.post('https://api.anthropic.com/v1/messages', {
@@ -87,23 +88,24 @@ async function summarizeWithGemini(content: string, isUrl: boolean): Promise<Sum
         // Using verified working model and endpoint from debugging session
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
 
-        const prompt = `You are an expert technical analyst. Extract structured data from the content below.
+        const prompt = `Extract from this content ONLY what is explicitly mentioned.
 
-STRICT REQUIREMENTS:
-1. **title**: Generate a concise (3-6 words) descriptive title. This is REQUIRED.
-2. **software_tools**: List ALL software tools, libraries, or frameworks mentioned. Return [].
-3. **topics**: Extract 3-5 high-level CONCEPT tags only.
-4. **summary**: 1-2 sentence technical summary.
+RULES:
+- Extract topics/skills MENTIONED IN THE TEXT
+- Extract software tools FOUND IN THE TEXT  
+- Do NOT infer or guess
+- Do NOT hallucinate
+- If not clearly in the text, do not include
 
 Content:
 ${content.slice(0, 10000)}
 
 Respond STRICTLY in JSON matching this structure:
 {
-  "title": "...",
-  "summary": "...",
-  "software_tools": [],
-  "topics": []
+  "title": "extracted title or 'No title found'",
+  "summary": "2-3 sentence technical summary",
+  "software_tools": ["only", "tools", "mentioned", "in", "text"],
+  "topics": ["only", "topics", "explicitly", "mentioned"]
 }`;
 
         const response = await axios.post(url, {

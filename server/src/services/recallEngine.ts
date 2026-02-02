@@ -31,6 +31,13 @@ async function getArchiveWithCache(userId: string): Promise<ArchiveItem[]> {
     return items;
 }
 
+export function invalidateCache(userId: string) {
+    if (archiveCache.has(userId)) {
+        logger.info({ userId }, 'Invalidating recall cache');
+        archiveCache.delete(userId);
+    }
+}
+
 export interface RecallMatch {
     archiveItemId: string;
     title: string;
@@ -52,13 +59,13 @@ export function generateReason(
     matchType: 'tag' | 'keyword' | 'tool' | 'hybrid',
     details?: string
 ): string {
-    // Case-insensitive reason generation
+    // FIX: Case-insensitive comparison
+    const lowerContextTags = (Array.isArray(contextTags) ? contextTags : []).map(t => t.toLowerCase());
+
     const itemTags = archiveItem.tags || [];
 
     switch (matchType) {
         case 'tag':
-            // FIX: Case-insensitive comparison
-            const lowerContextTags = contextTags.map(t => t.toLowerCase());
             const matchingTags = itemTags.filter(t => lowerContextTags.includes(t.toLowerCase()));
             return `Matches ${matchingTags.length} tags: ${matchingTags.slice(0, 3).join(', ').toUpperCase()}`;
         case 'keyword':
@@ -67,9 +74,7 @@ export function generateReason(
             return `References detected tool: ${details}`;
         case 'hybrid':
         default:
-            // FIX: Case-insensitive comparison
-            const lowerContext = contextTags.map(t => t.toLowerCase());
-            const matches = itemTags.filter(t => lowerContext.includes(t.toLowerCase()));
+            const matches = itemTags.filter(t => lowerContextTags.includes(t.toLowerCase()));
             return matches.length > 0
                 ? `Matches tags: ${matches.join(', ')}`
                 : 'Relevance inferred from context overlap';
@@ -87,7 +92,7 @@ export async function matchArchiveToContext(
     currentProjectDescription?: string
 ): Promise<RecallMatch[]> {
     const matches: RecallMatch[] = [];
-    const lowerContextTags = currentContextTags.map(t => t.toLowerCase());
+    const lowerContextTags = (Array.isArray(currentContextTags) ? currentContextTags : []).map(t => t.toLowerCase());
     const lowerQuery = query?.toLowerCase() || '';
     const lowerDesc = currentProjectDescription?.toLowerCase() || '';
 
@@ -102,10 +107,12 @@ export async function matchArchiveToContext(
         const itemContent = ((item.summary || '') + (item.title || '')).toLowerCase();
 
         // 1. Tag Overlap (High Weight)
-        const intersectingTags = itemTags.filter(tag => lowerContextTags.includes(tag));
+        // Safety check for context tags
+        const safeContextTags = Array.isArray(lowerContextTags) ? lowerContextTags : [];
+        const intersectingTags = itemTags.filter(tag => safeContextTags.includes(tag));
         if (intersectingTags.length > 0) {
             // Jaccard-ish score: intersection / union
-            const union = new Set([...itemTags, ...lowerContextTags]).size;
+            const union = new Set([...itemTags, ...safeContextTags]).size;
             score += (intersectingTags.length / union) * 0.6; // 60% weight
             reasons.push(`Tags: ${intersectingTags.slice(0, 2).join(', ')}`);
             matchType = 'tag';
@@ -129,7 +136,7 @@ export async function matchArchiveToContext(
         }
 
         // 4. Tool Match (High Signal)
-        const toolMatches = itemTools.filter(t => lowerContextTags.includes(t));
+        const toolMatches = itemTools.filter(t => safeContextTags.includes(t));
         if (toolMatches.length > 0) {
             score += 0.2;
             reasons.push(`Tool: ${toolMatches[0]}`);

@@ -155,6 +155,23 @@ export const Dashboard: React.FC = () => {
         }
     }, [context, recallLoading, matches.length, handleRecall]);
 
+    const handleViewInArchive = (id: string) => {
+        console.log('[Dashboard] Viewing item in archive:', id);
+        const item = archiveItems.find(i => i.id === id);
+        if (item) {
+            // Set search query to title to filter list
+            setSearchQuery(item.title);
+            // Optionally clear tags if they conflict, but usually title search is enough
+
+            // Scroll to archive
+            const element = document.getElementById('archive-section');
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth' });
+                // Flash effect/Highlight could be added here
+            }
+        }
+    };
+
     if (authLoading) {
         return <div className="mono">LOADING...</div>;
     }
@@ -295,10 +312,7 @@ export const Dashboard: React.FC = () => {
                                     <RecallCard
                                         key={match.archiveItemId}
                                         match={match}
-                                        onArchiveClick={(id) => {
-                                            // Navigate to or highlight archive item
-                                            console.log('Navigate to archive item', id);
-                                        }}
+                                        onArchiveClick={handleViewInArchive}
                                     />
                                 ))}
                             </div>
@@ -309,6 +323,7 @@ export const Dashboard: React.FC = () => {
                 <SystemLog entries={logs || []} />
 
                 <section
+                    id="archive-section"
                     className="card"
                     style={{ gridColumn: '1 / -1', marginTop: '20px', borderTop: '4px solid #000' }}
                     aria-label="Knowledge archive"

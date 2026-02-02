@@ -4,6 +4,7 @@ import { db } from './firestoreService.js';
 import { logEvent } from './systemLogService.js';
 import { pino } from 'pino';
 import { summarizeContent } from './llmService.js';
+import { invalidateCache } from './recallEngine.js';
 
 const logger = pino();
 
@@ -140,6 +141,9 @@ export async function captureItem(userId: string, input: string): Promise<Archiv
     // Use root collection 'archive' to match frontend useFirestore('archive')
     const ref = await db.collection('archive').add(item);
     await logEvent(userId, 'capture', 'success', `Stored item: ${title}`);
+
+    // Invalidate cache so it appears in Recall immediately
+    invalidateCache(userId);
 
     return { id: ref.id, ...item };
 }

@@ -28,7 +28,7 @@ export const Dashboard: React.FC = () => {
     const [archiveItems, setArchiveItems] = useState<ArchiveItem[]>([]);
     const [logs, setLogs] = useState<LogEntry[]>([]); // Local session logs
 
-    const { context, syncContext, loading } = useGitHubContext();
+    const { context, syncContext, loading } = useGitHubContext(user?.uid);
 
     // Helper to add logs locally
     const addLog = (entry: Omit<LogEntry, 'timestamp'>) => {
@@ -38,7 +38,10 @@ export const Dashboard: React.FC = () => {
     // Fetch Archive from API
     const fetchArchive = async () => {
         try {
-            const res = await fetch('/api/archive');
+            const headers: Record<string, string> = {};
+            if (user?.uid) headers['x-user-id'] = user.uid;
+
+            const res = await fetch('/api/archive', { headers });
             if (res.ok) {
                 const json = await res.json();
                 setArchiveItems(json.data || []);
@@ -103,7 +106,10 @@ export const Dashboard: React.FC = () => {
             // 2. Call API
             const res = await fetch('/api/capture', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(user?.uid ? { 'x-user-id': user.uid } : {})
+                },
                 body: JSON.stringify({ url: input })
             });
 

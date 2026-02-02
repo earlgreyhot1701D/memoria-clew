@@ -24,6 +24,8 @@ app.get('/health', (req, res) => {
 
 // ━━━━━━━━━━━━━━━━ CAPTURE API ━━━━━━━━━━━━━━━━
 
+// ━━━━━━━━━━━━━━━━ CAPTURE API ━━━━━━━━━━━━━━━━
+
 app.post('/api/capture', async (req, res) => {
     try {
         const { url } = req.body;
@@ -32,7 +34,9 @@ app.post('/api/capture', async (req, res) => {
             return res.status(400).json({ error: 'Content required' });
         }
 
-        const userId = req.ip || 'anonymous';
+        const userId = (req.headers['x-user-id'] as string) || req.ip || 'anonymous';
+        logger.info({ userId }, 'Capture request received');
+
         const rateLimit = await checkRateLimit('capture', userId);
         if (!rateLimit.allowed) {
             return res.status(429).json({
@@ -41,8 +45,6 @@ app.post('/api/capture', async (req, res) => {
             });
         }
 
-        // Hardcoded user for MVP - implementing full auth middleware later
-        // const userId = 'current-user'; // Removed to use ip-based userId defined above
         const archiveItem = await captureItem(userId, url);
 
         res.json({
@@ -61,7 +63,7 @@ app.post('/api/capture', async (req, res) => {
 
 app.get('/api/archive', async (req, res) => {
     try {
-        const userId = req.ip || 'anonymous';
+        const userId = (req.headers['x-user-id'] as string) || req.ip || 'anonymous';
         const items = await getArchive(userId);
 
         res.json({
@@ -81,10 +83,7 @@ app.get('/api/archive', async (req, res) => {
 // NEW ENDPOINT: Pattern Analysis
 app.get('/api/patterns', async (req, res) => {
     try {
-        const userId = req.headers['x-user-id'] as string;
-        if (!userId) {
-            return res.status(400).json({ error: 'x-user-id header required' });
-        }
+        const userId = (req.headers['x-user-id'] as string) || req.ip || 'anonymous';
 
         const { analyzeResearchPatterns } = await import('./services/patternAnalysisService.js');
         const patterns = await analyzeResearchPatterns(userId);
@@ -109,6 +108,9 @@ app.post('/api/context/sync', async (req, res) => {
     try {
         const githubToken = process.env.GITHUB_TOKEN!;
         const githubUsername = process.env.GITHUB_USERNAME!;
+        // Use authenticated user ID if provided, otherwise default to ip/anonymous which might be risky for seeding
+        // But for consistency:
+        const userId = (req.headers['x-user-id'] as string) || req.ip || 'anonymous';
 
         const rateLimit = await checkRateLimit('github', githubUsername);
         if (!rateLimit.allowed) {
@@ -118,7 +120,8 @@ app.post('/api/context/sync', async (req, res) => {
             });
         }
 
-        const result = await seedGitHubContext(githubToken, githubUsername);
+        // Pass userId to seed function so items are stored under correct ID
+        const result = await seedGitHubContext(githubToken, githubUsername, userId);
         res.json({
             success: true,
             data: result,
@@ -174,7 +177,8 @@ app.post('/api/recall', async (req, res) => {
             }
         }
 
-        const { userId = req.ip || 'anonymous', tags = [], description = '', query = '' } = req.body;
+        const userId = (req.headers['x-user-id'] as string) || req.ip || 'anonymous';
+        const { tags = [], description = '', query = '' } = req.body;
 
         // Validation for Stage 4 High Priority Bug Fix
         if (tags && !Array.isArray(tags)) {

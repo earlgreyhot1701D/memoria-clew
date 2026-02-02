@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
-export function useGitHubContext() {
+export function useGitHubContext(userId?: string) {
     const [context, setContext] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -11,7 +11,11 @@ export function useGitHubContext() {
     const syncContext = async () => {
         try {
             setLoading(true);
-            const response = await axios.post(`${mcpServerUrl}/api/context/sync`);
+            const headers: any = {};
+            if (userId) {
+                headers['x-user-id'] = userId;
+            }
+            const response = await axios.post(`${mcpServerUrl}/api/context/sync`, {}, { headers });
             setContext(response.data.data);
             setError(null);
         } catch (err: any) {

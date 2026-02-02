@@ -87,22 +87,26 @@ function deriveTechFingerprint(content: string): string[] {
  */
 export async function seedGitHubContext(
     githubToken: string,
-    githubUsername: string
-): Promise<{ repos: string; tags: string; reason: string }> {
-    logger.info({ username: githubUsername }, 'Starting GitHub context seed');
+    githubUsername: string,
+    targetUserId: string
+): Promise<any> {
+    logger.info({ username: githubUsername, targetUserId }, 'Starting GitHub context seed');
 
     try {
         const cacheKey = `github-context-${githubUsername}`;
         const cached = await db.collection('memoria').doc(cacheKey).get();
 
-        if (cached.exists && Date.now() - cached.data()!.timestamp < CACHE_TTL) {
-            logger.info({ username: githubUsername }, 'Using cached GitHub context');
-            return {
-                repos: cached.data()!.repos.length,
-                tags: cached.data()!.allTags.join(', '),
-                reason: 'Served from 24h cache',
-            };
-        }
+        // CACHE BYPASS FOR ARCHIVE SYNC FIX
+        // if (cached.exists && Date.now() - cached.data()!.timestamp < CACHE_TTL) {
+        //     logger.info({ username: githubUsername }, 'Using cached GitHub context');
+        //     const data = cached.data()!;
+        //     return {
+        //         username: data.username || githubUsername,
+        //         repos: data.repos,
+        //         allTags: data.allTags,
+        //         reason: 'Served from 24h cache',
+        //     };
+        // }
 
         const repos = await fetchUserRepos(githubToken, githubUsername);
         const contextData = [];
@@ -142,7 +146,8 @@ export async function seedGitHubContext(
         for (const repo of contextData) {
             const archiveItem = {
                 id: `github-${repo.id}`,  // Prefix to avoid ID conflicts
-                userId: githubUsername,   // CRITICAL: Associate with user
+                userId: targetUserId,     // CRITICAL: Use passed ID, not default
+
                 title: repo.repoName,
                 summary: repo.description || `GitHub repository: ${repo.repoName}`,
                 url: repo.url,
@@ -181,8 +186,9 @@ export async function seedGitHubContext(
         }, 'GitHub context seeded successfully');
 
         return {
-            repos: repos.length.toString(),
-            tags: Array.from(allTags).join(', '),
+            username: githubUsername,
+            repos: contextData,
+            allTags: Array.from(allTags),
             reason: 'Freshly seeded from GitHub API',
         };
     } catch (err: any) {
@@ -204,7 +210,13 @@ export async function getGitHubContext(githubUsername: string): Promise<any> {
             return null;
         }
 
-        return doc.data();
+        const data = doc.data();
+        if (!data || !Array.isArray(data.repos)) {
+            logger.warn({ username: githubUsername }, 'Invalid or legitimate missing cache');
+            return null;
+        }
+
+        return data;
     } catch (err: any) {
         logger.error({ error: err.message }, 'Failed to retrieve GitHub context');
         return null;

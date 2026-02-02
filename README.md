@@ -150,11 +150,11 @@ This layer is **separate from recall** (which is deterministic matching) and foc
 - Case-insensitive matching with multi-factor scoring
 
 ### ✅ Pattern Analysis (Agent-Powered Intelligence)
-- Analyzes your complete research archive
+- Analyzes your complete research archive via **LLM (Claude/Gemini)**
 - Detects **learning themes** (what technologies/patterns you focus on)
 - Identifies **knowledge gaps** (what you haven't explored yet)
 - Generates **recommendations** (what to learn next based on your trajectory)
-- Exposed via **MCP tool** (`memoria_patterns`) for agent integration
+- Exposed via **Dashboard UI** ("ANALYZE_PATTERNS" button) + **MCP tool**
 - All reasoning is logged and inspectable (no black-box decisions)
 
 ### ✅ Manual "Proactive" Scan (MVP)

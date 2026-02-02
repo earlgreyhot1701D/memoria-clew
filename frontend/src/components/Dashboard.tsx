@@ -11,6 +11,7 @@ import { ArchiveFilter } from './ArchiveFilter';
 import { SystemLog } from './SystemLog';
 import { ErrorBanner } from './ErrorBanner';
 import { OnboardingTooltip } from './OnboardingTooltip';
+import { PatternAnalysisView } from './PatternAnalysisView';
 import { useRecall } from '../hooks/useRecall';
 import { useArchiveSearch } from '../hooks/useArchiveSearch';
 import '../styles/dashboard.css';
@@ -70,6 +71,7 @@ export const Dashboard: React.FC = () => {
 
     const [error, setError] = useState<string | null>(null);
     const [showOnboarding, setShowOnboarding] = useState(false);
+    const [showPatterns, setShowPatterns] = useState(false);
 
     useEffect(() => {
         const seen = localStorage.getItem('memoria_onboarding_seen');
@@ -276,6 +278,13 @@ export const Dashboard: React.FC = () => {
                             >
                                 {recallLoading ? 'REFRESHING...' : 'REFRESH'}
                             </button>
+                            <button
+                                onClick={() => setShowPatterns(!showPatterns)}
+                                className="btn-minimal mono"
+                                style={{ fontSize: '10px', padding: '2px 6px', marginLeft: '5px' }}
+                            >
+                                {showPatterns ? 'HIDE_PATTERNS' : 'ANALYZE_PATTERNS'}
+                            </button>
                         </div>
 
                         {/* 
@@ -318,6 +327,14 @@ export const Dashboard: React.FC = () => {
                             </div>
                         )}
                     </section>
+
+                    {/* PATTERN ANALYSIS SECTION (Lazy Loaded UI) */}
+                    {showPatterns && (
+                        <PatternAnalysisView
+                            userId={user.uid}
+                            onClose={() => setShowPatterns(false)}
+                        />
+                    )}
                 </main>
 
                 <SystemLog entries={logs || []} />

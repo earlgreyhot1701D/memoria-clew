@@ -169,14 +169,14 @@ export async function matchArchiveToContext(
     matches.sort((a, b) => b.relevanceScore - a.relevanceScore);
 
     // Fallback / Intelligence Stream Surfacing:
-    // If we have fewer than 3 matches, pad with recent interesting items.
-    if (matches.length < 3) {
+    // If we have fewer than 5 matches, pad with recent interesting items.
+    if (matches.length < 5) {
         const existingIds = new Set(matches.map(m => m.archiveItemId));
         // Sort archive by recency
         const recentItems = [...archiveItems].sort((a, b) => b.timestamp - a.timestamp);
 
         for (const item of recentItems) {
-            if (matches.length >= 3) break;
+            if (matches.length >= 5) break;
             if (existingIds.has(item.id)) continue;
 
             matches.push({

@@ -193,7 +193,7 @@ export async function matchArchiveToContext(
         }
     }
 
-    return matches.slice(0, 10);
+    return matches.slice(0, 50);
 }
 
 /**

@@ -145,21 +145,25 @@ export const Dashboard: React.FC = () => {
         const activeTags = [...new Set([...(selectedTag ? [selectedTag] : []), ...contextTags])];
 
         console.log('[Dashboard] Recalling with tags:', activeTags);
-        recall(activeTags, "Active dashboard session");
+        recall(activeTags, "Active dashboard session", undefined, user?.uid);
     };
 
     // Auto-trigger "Intelligence Stream" when context loads
+    const hasAutoRecalled = React.useRef(false);
+
+    // Reset auto-recall when context changes (e.g. re-sync)
     useEffect(() => {
-        if (context && !recallLoading && matches.length === 0) {
+        if (context) {
+            hasAutoRecalled.current = false;
+        }
+    }, [context]);
+
+    useEffect(() => {
+        if (context && !recallLoading && matches.length === 0 && !hasAutoRecalled.current) {
             console.log('[Dashboard] Auto-triggering Intelligence Stream');
+            hasAutoRecalled.current = true; // Prevent looping if 0 matches found
             addLog({ action: 'RECALL_INIT', details: 'Auto-refreshing context...' });
             handleRecall();
-        } else if (matches.length > 0) {
-            // Log when matches update (optional, but good for visibility)
-            // Ideally we'd log this inside useRecall but that's a hook.
-            // We can check if we just finished loading?
-            // Simpler: useRecall could return a 'lastRun' timestamp or similar.
-            // For now, let's just log the init.
         }
     }, [context, recallLoading, matches.length, handleRecall]);
 
@@ -323,13 +327,15 @@ export const Dashboard: React.FC = () => {
                                 gap: '12px',
                                 marginTop: '15px'
                             }}>
-                                {matches.map((match) => (
-                                    <RecallCard
-                                        key={match.archiveItemId}
-                                        match={match}
-                                        onArchiveClick={handleViewInArchive}
-                                    />
-                                ))}
+                                {matches
+                                    .filter(m => m.source !== 'github') // Hide Repo noise from stream, keep for Patterns
+                                    .map((match) => (
+                                        <RecallCard
+                                            key={match.archiveItemId}
+                                            match={match}
+                                            onArchiveClick={handleViewInArchive}
+                                        />
+                                    ))}
                             </div>
                         )}
                     </section>

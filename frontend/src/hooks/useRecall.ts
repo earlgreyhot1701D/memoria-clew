@@ -5,7 +5,7 @@ export interface RecallMatch {
     title: string;
     summary: string;
     url?: string;
-    source: 'url' | 'manual' | 'hn';
+    source: 'url' | 'manual' | 'hn' | 'github';
     tags: string[];
     matchReason: string;
     relevanceScore: number;
@@ -22,7 +22,8 @@ export function useRecall() {
     const recall = useCallback(async (
         tags: string[],
         description?: string,
-        query?: string
+        query?: string,
+        userId?: string
     ) => {
         setLoading(true);
         setError(null);
@@ -35,9 +36,12 @@ export function useRecall() {
         setAbortController(controller);
 
         try {
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (userId) headers['x-user-id'] = userId;
+
             const response = await fetch('/api/recall', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({ tags, description, query }),
                 signal: controller.signal
             });

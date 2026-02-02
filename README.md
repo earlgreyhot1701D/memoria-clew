@@ -150,6 +150,7 @@ This layer is **separate from recall** (which is deterministic matching) and foc
 - Case-insensitive matching with multi-factor scoring
 
 ### ✅ Pattern Analysis (Agent-Powered Intelligence)
+![Deep Pattern Analysis](./assets/deeppatternanalysis.png)
 - Analyzes your complete research archive via **LLM (Claude/Gemini)**
 - Detects **learning themes** (what technologies/patterns you focus on)
 - Identifies **knowledge gaps** (what you haven't explored yet)

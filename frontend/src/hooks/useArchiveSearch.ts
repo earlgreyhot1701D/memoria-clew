@@ -20,10 +20,10 @@ export function useArchiveSearch(items: ArchiveItem[]) {
 
             const query = searchQuery.toLowerCase();
             const matchesSearch = !searchQuery ||
-                (item.title && item.title.toLowerCase().includes(query)) ||
-                (item.summary && item.summary.toLowerCase().includes(query)) ||
-                (item.content && item.content.toLowerCase().includes(query)) ||
-                (item.detectedTools && item.detectedTools.some(tool => tool.toLowerCase().includes(query)));
+                (item.title && String(item.title).toLowerCase().includes(query)) ||
+                (item.summary && String(item.summary).toLowerCase().includes(query)) ||
+                (item.content && String(item.content).toLowerCase().includes(query)) ||
+                (item.detectedTools && item.detectedTools.some(tool => String(tool).toLowerCase().includes(query)));
 
             return matchesTag && matchesSearch;
         });
